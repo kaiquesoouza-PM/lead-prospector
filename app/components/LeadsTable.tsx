@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { Lead, LeadFlag } from '../types';
+import type { Lead, LeadFlag, LeadProfile } from '../types';
+import { PROFILE_MAP } from '../types';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -48,7 +49,8 @@ function StarRating({ rating }: { rating?: number }) {
 export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: LeadsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('leadScore');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [filter,  setFilter]  = useState<'all' | 'no-website'>('all');
+  const [filter,        setFilter]       = useState<'all' | 'no-website'>('all');
+  const [profileFilter, setProfileFilter] = useState<LeadProfile | 'all'>('all');
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -61,6 +63,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
 
   const sorted = [...leads]
     .filter((l) => filter === 'all' || !l.hasWebsite)
+    .filter((l) => profileFilter === 'all' || l.profile === profileFilter)
     .sort((a, b) => {
       let av: number | string = a[sortKey] ?? 0;
       let bv: number | string = b[sortKey] ?? 0;
@@ -104,7 +107,8 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Website filter */}
           <button
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
@@ -125,6 +129,27 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
           >
             Sem Website ({noWebsiteCount})
           </button>
+
+          {/* Profile filter */}
+          <div className="w-px bg-gray-200 mx-1" />
+          {(['all', 'consolidated', 'growing', 'low-visibility'] as const).map((p) => {
+            const info  = p !== 'all' ? PROFILE_MAP[p] : null;
+            const count = p === 'all' ? leads.length : leads.filter((l) => l.profile === p).length;
+            const active = profileFilter === p;
+            return (
+              <button
+                key={p}
+                onClick={() => setProfileFilter(p)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  active
+                    ? 'bg-gray-800 text-white border-gray-800'
+                    : 'text-gray-600 border-gray-300 hover:border-gray-500'
+                }`}
+              >
+                {p === 'all' ? `Todos perfis` : info!.label} ({count})
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -147,6 +172,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
               <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('photoCount')}>
                 Fotos <SortIcon k="photoCount" />
               </th>
+              <th className="px-4 py-3 text-left">Perfil</th>
               <th className="px-4 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('leadScore')}>
                 Score <SortIcon k="leadScore" />
@@ -215,6 +241,13 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                 {/* Photos */}
                 <td className="px-4 py-3 text-center text-gray-600">
                   {lead.photoCount > 0 ? lead.photoCount : '—'}
+                </td>
+
+                {/* Profile */}
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROFILE_MAP[lead.profile].color}`}>
+                    {PROFILE_MAP[lead.profile].label}
+                  </span>
                 </td>
 
                 {/* Flags */}

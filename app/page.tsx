@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import SearchForm from './components/SearchForm';
 import LeadsTable from './components/LeadsTable';
 import ExportButtons from './components/ExportButtons';
+import LeadDetailPanel from './components/LeadDetailPanel';
 import type { Lead, PlaceType } from './types';
 
 // MapView uses browser-only APIs — load it client-side only
@@ -119,6 +120,7 @@ export default function HomePage() {
 
   const { leads, isLoading, error, center, radius, selectedLeadId } = state;
 
+  const selectedLead    = leads.find((l) => l.id === selectedLeadId);
   const noWebsiteLeads  = leads.filter((l) => !l.hasWebsite);
   const avgScore        = leads.length
     ? Math.round(leads.reduce((s, l) => s + l.leadScore, 0) / leads.length)
@@ -188,17 +190,30 @@ export default function HomePage() {
           />
         )}
 
-        {/* Table */}
-        <LeadsTable
-          leads={leads}
-          selectedLeadId={selectedLeadId}
-          onSelectLead={(lead) =>
-            setState((prev) => ({
-              ...prev,
-              selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id,
-            }))
-          }
-        />
+        {/* Table + Detail panel side by side when a lead is selected */}
+        <div className={`flex gap-4 ${selectedLead ? 'items-start' : ''}`}>
+          <div className="flex-1 min-w-0">
+            <LeadsTable
+              leads={leads}
+              selectedLeadId={selectedLeadId}
+              onSelectLead={(lead) =>
+                setState((prev) => ({
+                  ...prev,
+                  selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id,
+                }))
+              }
+            />
+          </div>
+
+          {selectedLead && (
+            <div className="w-[400px] flex-shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-hidden">
+              <LeadDetailPanel
+                lead={selectedLead}
+                onClose={() => setState((prev) => ({ ...prev, selectedLeadId: undefined }))}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Loading skeleton */}
         {isLoading && (

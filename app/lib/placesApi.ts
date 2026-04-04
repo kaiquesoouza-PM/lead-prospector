@@ -2,7 +2,7 @@
  * Google Places API (New) integration.
  * All calls are made server-side so the API key is never exposed to the browser.
  */
-import type { GooglePlace, Lead, LeadFlag, SearchParams } from '../types';
+import type { GooglePlace, Lead, LeadFlag, LeadProfile, SearchParams } from '../types';
 
 const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
@@ -25,13 +25,17 @@ const FIELD_MASK = [
   'places.primaryType',
 ].join(',');
 
-// ─── Lead scoring thresholds ─────────────────────────────────────────────────
+// ─── Thresholds ───────────────────────────────────────────────────────────────
 
-/** Establishments with fewer reviews than this are considered "low profile". */
 const FEW_REVIEWS_THRESHOLD = 50;
+const FEW_PHOTOS_THRESHOLD  = 5;
 
-/** Establishments with fewer photos than this are considered "low profile". */
-const FEW_PHOTOS_THRESHOLD = 5;
+/** Maps review count to a narrative profile. */
+function classifyProfile(reviewCount: number): LeadProfile {
+  if (reviewCount >= 100) return 'consolidated';
+  if (reviewCount >= 20)  return 'growing';
+  return 'low-visibility';
+}
 
 // ─── Transform + score ───────────────────────────────────────────────────────
 
@@ -78,6 +82,8 @@ export function transformPlace(place: GooglePlace): Lead {
     hasFewPhotos,
     leadScore,
     flags,
+    profile:   classifyProfile(reviewCount),
+    photoRefs: (place.photos ?? []).slice(0, 6).map((p) => p.name),
   };
 }
 
