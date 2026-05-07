@@ -81,6 +81,16 @@ export interface GooglePlace {
   location: { latitude: number; longitude: number };
   googleMapsUri?: string;
   primaryType?: string;
+  // Menu-related
+  priceLevel?: string;
+  editorialSummary?: { text: string; languageCode: string };
+  servesBeer?: boolean;
+  servesWine?: boolean;
+  servesBreakfast?: boolean;
+  servesLunch?: boolean;
+  servesDinner?: boolean;
+  servesBrunch?: boolean;
+  servesVegetarianFood?: boolean;
 }
 
 // ─── Processed Lead ──────────────────────────────────────────────────────────
@@ -112,6 +122,16 @@ export interface Lead {
    * Use /api/photos to resolve these into actual image URLs.
    */
   photoRefs: string[];
+  // Menu & service attributes
+  priceLevel?:          string;
+  editorialSummary?:    string;
+  servesBreakfast?:     boolean;
+  servesLunch?:         boolean;
+  servesDinner?:        boolean;
+  servesBrunch?:        boolean;
+  servesBeer?:          boolean;
+  servesWine?:          boolean;
+  servesVegetarianFood?: boolean;
 }
 
 // ─── Search Parameters ───────────────────────────────────────────────────────

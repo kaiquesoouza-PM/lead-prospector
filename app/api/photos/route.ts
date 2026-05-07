@@ -16,7 +16,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-const MAX_PHOTOS = 6;
+const MAX_PHOTOS = 10;
 const PHOTO_WIDTH = 800;
 
 async function resolvePhotoUrl(ref: string, apiKey: string): Promise<string | null> {

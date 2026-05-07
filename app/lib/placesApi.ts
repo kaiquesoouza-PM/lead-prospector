@@ -8,10 +8,17 @@ const PLACES_API_BASE = 'https://places.googleapis.com/v1';
 
 /**
  * Fields requested from Places API (New).
- * Only request what you need — each field group has a billing tier.
- * photos is in the "Atmosphere" SKU; everything else is "Basic".
+ * Billing tiers:
+ *   Basic     — id, displayName, formattedAddress, location, nationalPhoneNumber,
+ *               rating, userRatingCount, websiteUri, googleMapsUri, primaryType
+ *   Advanced  — priceLevel, editorialSummary
+ *   Preferred — photos, servesBeer/Wine/Breakfast/Lunch/Dinner/Brunch, servesVegetarianFood
+ *
+ * Adding Preferred fields moves each request from Basic ($32/1k) to Preferred ($45/1k).
+ * With 12 parallel type calls per search, keep an eye on usage in the Google Cloud console.
  */
 const FIELD_MASK = [
+  // Basic
   'places.id',
   'places.displayName',
   'places.formattedAddress',
@@ -19,10 +26,21 @@ const FIELD_MASK = [
   'places.rating',
   'places.userRatingCount',
   'places.websiteUri',
-  'places.photos',
   'places.location',
   'places.googleMapsUri',
   'places.primaryType',
+  // Advanced
+  'places.priceLevel',
+  'places.editorialSummary',
+  // Preferred
+  'places.photos',
+  'places.servesBeer',
+  'places.servesWine',
+  'places.servesBreakfast',
+  'places.servesLunch',
+  'places.servesDinner',
+  'places.servesBrunch',
+  'places.servesVegetarianFood',
 ].join(',');
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
@@ -83,7 +101,17 @@ export function transformPlace(place: GooglePlace): Lead {
     leadScore,
     flags,
     profile:   classifyProfile(reviewCount),
-    photoRefs: (place.photos ?? []).slice(0, 6).map((p) => p.name),
+    photoRefs: (place.photos ?? []).slice(0, 10).map((p) => p.name),
+    // Menu & service attributes
+    priceLevel:           place.priceLevel,
+    editorialSummary:     place.editorialSummary?.text,
+    servesBeer:           place.servesBeer,
+    servesWine:           place.servesWine,
+    servesBreakfast:      place.servesBreakfast,
+    servesLunch:          place.servesLunch,
+    servesDinner:         place.servesDinner,
+    servesBrunch:         place.servesBrunch,
+    servesVegetarianFood: place.servesVegetarianFood,
   };
 }
 
@@ -108,6 +136,9 @@ async function fetchByType(
     body: JSON.stringify({
       includedTypes: [type],
       maxResultCount: 20, // hard limit per request in Places API (New)
+      // DISTANCE ranking surfaces nearby small businesses regardless of popularity,
+      // preventing well-known (website-having) chains from crowding out local spots.
+      rankPreference: 'DISTANCE',
       locationRestriction: {
         circle: {
           center: { latitude: params.lat, longitude: params.lng },

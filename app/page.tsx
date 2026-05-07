@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import SearchForm from './components/SearchForm';
 import LeadsTable from './components/LeadsTable';
 import ExportButtons from './components/ExportButtons';
 import LeadDetailPanel from './components/LeadDetailPanel';
+import CrmTab from './components/CrmTab';
 import type { Lead, PlaceType } from './types';
+import { captureLeadToCRM, isLeadCaptured } from './lib/crmStorage';
 
-// MapView uses browser-only APIs — load it client-side only
 const MapView = dynamic(() => import('./components/MapView'), { ssr: false });
 
-// ─── State ───────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Tab = 'search' | 'crm';
 
 interface AppState {
   leads:          Lead[];
@@ -23,15 +26,11 @@ interface AppState {
 }
 
 const initialState: AppState = {
-  leads:          [],
-  isLoading:      false,
-  error:          null,
-  center:         null,
-  radius:         5_000,
-  selectedLeadId: undefined,
+  leads: [], isLoading: false, error: null,
+  center: null, radius: 5_000, selectedLeadId: undefined,
 };
 
-// ─── Stats card ──────────────────────────────────────────────────────────────
+// ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -46,91 +45,69 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [state, setState] = useState<AppState>(initialState);
+  const [state,       setState]       = useState<AppState>(initialState);
+  const [activeTab,   setActiveTab]   = useState<Tab>('search');
+  const [capturedIds, setCapturedIds] = useState<Set<string>>(new Set());
 
-  // Geocode address → lat/lng (or use GPS coords directly)
+  // Load already-captured IDs on mount
+  useEffect(() => {
+    const { getTrackedLeads } = require('./lib/crmStorage');
+    const ids = new Set<string>(getTrackedLeads().map((l: { id: string }) => l.id));
+    setCapturedIds(ids);
+  }, []);
+
   const resolveCoords = useCallback(
     async (address: string, useGPS: boolean): Promise<{ lat: number; lng: number }> => {
       if (useGPS) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            () => reject(new Error('Não foi possível obter localização GPS. Verifique as permissões.'))
-          );
-        });
+            () => reject(new Error('Não foi possível obter localização GPS.'))
+          )
+        );
       }
-
-      const res  = await fetch('/api/geocode', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ address }),
-      });
+      const res  = await fetch('/api/geocode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address }) });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error ?? 'Erro ao geocodificar endereço.');
       return { lat: data.lat, lng: data.lng };
     },
     []
   );
 
-  // Main search handler
   const handleSearch = useCallback(
-    async ({
-      address,
-      radius,
-      types,
-      useGPS,
-    }: {
-      address: string;
-      radius:  number;
-      types:   PlaceType[];
-      useGPS:  boolean;
-    }) => {
+    async ({ address, radius, types, useGPS }: { address: string; radius: number; types: PlaceType[]; useGPS: boolean }) => {
       setState((prev) => ({ ...prev, isLoading: true, error: null, leads: [], selectedLeadId: undefined }));
-
       try {
         const coords = await resolveCoords(address, useGPS);
-
-        const res  = await fetch('/api/places', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ lat: coords.lat, lng: coords.lng, radius, types }),
-        });
-        const data = await res.json();
-
+        const res    = await fetch('/api/places', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lat: coords.lat, lng: coords.lng, radius, types }) });
+        const data   = await res.json();
         if (!res.ok) throw new Error(data.error ?? 'Erro ao buscar estabelecimentos.');
-
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          leads:     data.leads as Lead[],
-          center:    coords,
-          radius,
-        }));
+        setState((prev) => ({ ...prev, isLoading: false, leads: data.leads as Lead[], center: coords, radius }));
       } catch (err) {
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error:     err instanceof Error ? err.message : 'Erro desconhecido.',
-        }));
+        setState((prev) => ({ ...prev, isLoading: false, error: err instanceof Error ? err.message : 'Erro desconhecido.' }));
       }
     },
     [resolveCoords]
   );
 
-  const { leads, isLoading, error, center, radius, selectedLeadId } = state;
+  const handleCapture = useCallback((lead: Lead) => {
+    const ok = captureLeadToCRM(lead);
+    if (ok) {
+      setCapturedIds((prev) => new Set([...prev, lead.id]));
+      setActiveTab('crm');
+    }
+  }, []);
 
-  const selectedLead    = leads.find((l) => l.id === selectedLeadId);
-  const noWebsiteLeads  = leads.filter((l) => !l.hasWebsite);
-  const avgScore        = leads.length
-    ? Math.round(leads.reduce((s, l) => s + l.leadScore, 0) / leads.length)
-    : 0;
+  const { leads, isLoading, error, center, radius, selectedLeadId } = state;
+  const selectedLead   = leads.find((l) => l.id === selectedLeadId);
+  const noWebsiteLeads = leads.filter((l) => !l.hasWebsite);
+  const avgScore       = leads.length ? Math.round(leads.reduce((s, l) => s + l.leadScore, 0) / leads.length) : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* ── Header ── */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="bg-green-600 text-white rounded-xl p-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -144,97 +121,109 @@ export default function HomePage() {
             </div>
           </div>
 
-          {leads.length > 0 && (
+          {/* Tabs */}
+          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+            {([
+              { key: 'search', label: 'Busca' },
+              { key: 'crm',    label: `Acompanhamento${capturedIds.size > 0 ? ` (${capturedIds.size})` : ''}` },
+            ] as { key: Tab; label: string }[]).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'search' && leads.length > 0 && (
             <ExportButtons leads={leads} disabled={isLoading} />
           )}
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Search form */}
-        <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm flex items-start gap-3">
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-            <span>{error}</span>
-          </div>
-        )}
+        {/* ════ SEARCH TAB ════ */}
+        {activeTab === 'search' && (
+          <>
+            <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
-        {/* Stats row */}
-        {leads.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatCard label="Total Encontrado"    value={leads.length}           sub="estabelecimentos" />
-            <StatCard label="Sem Website"         value={noWebsiteLeads.length}  sub={`${Math.round((noWebsiteLeads.length / leads.length) * 100)}% do total`} />
-            <StatCard label="Score Médio"         value={`${avgScore}/100`}      sub="oportunidade de prospecção" />
-            <StatCard label="Poucas Avaliações"   value={leads.filter((l) => l.hasFewReviews).length} sub="menos de 50 reviews" />
-          </div>
-        )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm flex items-start gap-3">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
 
-        {/* Map */}
-        {center && leads.length > 0 && (
-          <MapView
-            center={center}
-            radius={radius}
-            leads={leads}
-            selectedLeadId={selectedLeadId}
-            onSelectLead={(lead) =>
-              setState((prev) => ({
-                ...prev,
-                selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id,
-              }))
-            }
-          />
-        )}
+            {leads.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatCard label="Total Encontrado"  value={leads.length}           sub="estabelecimentos" />
+                <StatCard label="Sem Website"        value={noWebsiteLeads.length}  sub={`${Math.round((noWebsiteLeads.length / leads.length) * 100)}% do total`} />
+                <StatCard label="Score Médio"        value={`${avgScore}/100`}      sub="oportunidade" />
+                <StatCard label="Poucas Avaliações"  value={leads.filter((l) => l.hasFewReviews).length} sub="menos de 50 reviews" />
+              </div>
+            )}
 
-        {/* Table + Detail panel side by side when a lead is selected */}
-        <div className={`flex gap-4 ${selectedLead ? 'items-start' : ''}`}>
-          <div className="flex-1 min-w-0">
-            <LeadsTable
-              leads={leads}
-              selectedLeadId={selectedLeadId}
-              onSelectLead={(lead) =>
-                setState((prev) => ({
-                  ...prev,
-                  selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id,
-                }))
-              }
-            />
-          </div>
-
-          {selectedLead && (
-            <div className="w-[400px] flex-shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-hidden">
-              <LeadDetailPanel
-                lead={selectedLead}
-                onClose={() => setState((prev) => ({ ...prev, selectedLeadId: undefined }))}
+            {center && leads.length > 0 && (
+              <MapView
+                center={center} radius={radius} leads={leads}
+                selectedLeadId={selectedLeadId}
+                onSelectLead={(lead) =>
+                  setState((prev) => ({ ...prev, selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id }))
+                }
               />
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Loading skeleton */}
-        {isLoading && (
-          <div className="bg-white rounded-2xl shadow-md p-10 flex flex-col items-center gap-4 text-gray-400">
-            <svg className="w-8 h-8 animate-spin text-green-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-            <p className="text-sm">Consultando Google Places API…</p>
-          </div>
+            <div className={`flex gap-4 ${selectedLead ? 'items-start' : ''}`}>
+              <div className="flex-1 min-w-0">
+                <LeadsTable
+                  leads={leads}
+                  selectedLeadId={selectedLeadId}
+                  onSelectLead={(lead) =>
+                    setState((prev) => ({ ...prev, selectedLeadId: prev.selectedLeadId === lead.id ? undefined : lead.id }))
+                  }
+                />
+              </div>
+
+              {selectedLead && (
+                <div className="w-[420px] flex-shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-hidden">
+                  <LeadDetailPanel
+                    lead={selectedLead}
+                    isCaptured={capturedIds.has(selectedLead.id)}
+                    onCapture={handleCapture}
+                    onClose={() => setState((prev) => ({ ...prev, selectedLeadId: undefined }))}
+                  />
+                </div>
+              )}
+            </div>
+
+            {isLoading && (
+              <div className="bg-white rounded-2xl shadow-md p-10 flex flex-col items-center gap-4 text-gray-400">
+                <svg className="w-8 h-8 animate-spin text-green-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                <p className="text-sm">Consultando Google Places API…</p>
+              </div>
+            )}
+          </>
         )}
+
+        {/* ════ CRM TAB ════ */}
+        {activeTab === 'crm' && <CrmTab />}
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 py-6 text-xs text-gray-400 text-center">
         Lead Prospector MVP · Dados fornecidos pela{' '}
-        <a
-          href="https://developers.google.com/maps/documentation/places/web-service/overview"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-gray-600"
-        >
+        <a href="https://developers.google.com/maps/documentation/places/web-service/overview" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">
           Google Places API (New)
         </a>
       </footer>

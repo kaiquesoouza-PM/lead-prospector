@@ -1,6 +1,6 @@
 'use client';
 
-import { exportToCSV, exportToJSON } from '../lib/exportUtils';
+import { exportToCSV, exportToJSON, exportAllBriefings } from '../lib/exportUtils';
 import type { Lead } from '../types';
 
 interface ExportButtonsProps {
@@ -36,6 +36,26 @@ export default function ExportButtons({ leads, disabled }: ExportButtonsProps) {
         </svg>
         JSON
       </button>
+      {(() => {
+        const noWebsite = leads.filter((l) => !l.hasWebsite);
+        if (noWebsite.length === 0) return null;
+        return (
+          <>
+            <div className="w-px h-5 bg-gray-200" />
+            <button
+              onClick={() => exportAllBriefings(noWebsite)}
+              disabled={disabled}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title={`Exportar prompts Lovable dos ${noWebsite.length} leads sem website`}
+            >
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+              Prompts Lovable ({noWebsite.length})
+            </button>
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { PROFILE_MAP } from '../types';
 import type { Lead } from '../types';
 import PhotoGallery from './PhotoGallery';
+import { exportLeadBriefing, generateLovablePrompt } from '../lib/exportUtils';
 
 interface LeadDetailPanelProps {
-  lead: Lead;
-  onClose: () => void;
+  lead:        Lead;
+  onClose:     () => void;
+  isCaptured?: boolean;
+  onCapture?:  (lead: Lead) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -79,11 +83,20 @@ const TYPE_LABELS: Record<string, string> = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function LeadDetailPanel({ lead, onClose }: LeadDetailPanelProps) {
+export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }: LeadDetailPanelProps) {
   const profile    = PROFILE_MAP[lead.profile];
   const typeLabel  = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? lead.primaryType) : 'Estabelecimento';
   const domain     = suggestDomain(lead.name);
   const whatsapp   = lead.phone?.replace(/\D/g, '');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPrompt = () => {
+    const prompt = generateLovablePrompt(lead);
+    navigator.clipboard.writeText(prompt).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 flex flex-col h-full overflow-hidden">
@@ -99,6 +112,34 @@ export default function LeadDetailPanel({ lead, onClose }: LeadDetailPanelProps)
           </div>
           <h2 className="text-base font-bold text-gray-900 mt-1 leading-snug">{lead.name}</h2>
         </div>
+        {!lead.hasWebsite && onCapture && (
+          <button
+            onClick={() => onCapture(lead)}
+            disabled={isCaptured}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors ${
+              isCaptured
+                ? 'bg-green-100 text-green-700 cursor-default'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+          >
+            {isCaptured ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Capturado
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Capturar Lead
+              </>
+            )}
+          </button>
+        )}
+
         <button
           onClick={onClose}
           className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
@@ -127,7 +168,7 @@ export default function LeadDetailPanel({ lead, onClose }: LeadDetailPanelProps)
 
         {/* ── Fotos do Google ── */}
         <Section title={`Fotos do Google (${lead.photoRefs.length} disponíveis)`}>
-          <PhotoGallery photoRefs={lead.photoRefs} />
+          <PhotoGallery photoRefs={lead.photoRefs} leadName={lead.name} />
         </Section>
 
         {/* ── Dados de Contato ── */}
@@ -218,6 +259,117 @@ export default function LeadDetailPanel({ lead, onClose }: LeadDetailPanelProps)
             )}
           </div>
         </Section>
+
+        {/* ── Exportar para Lovable (apenas sem website) ── */}
+        {!lead.hasWebsite && <Section title="Exportar para Lovable">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Gere um prompt completo para colar no <strong>Lovable.dev</strong> e criar o site deste estabelecimento com IA.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopyPrompt}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                copied
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-green-500 hover:text-green-700'
+              }`}
+            >
+              {copied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                  Copiado!
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copiar Prompt
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => exportLeadBriefing(lead)}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-300 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700 transition-colors"
+              title="Baixar como arquivo .txt"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              .txt
+            </button>
+          </div>
+        </Section>}
+
+        {/* ── Cardápio & Serviços ── */}
+        {(lead.editorialSummary || lead.priceLevel ||
+          lead.servesBeer || lead.servesWine || lead.servesBreakfast ||
+          lead.servesLunch || lead.servesDinner || lead.servesBrunch ||
+          lead.servesVegetarianFood) && (
+          <Section title="Cardápio & Serviços (Google)">
+            {/* Editorial summary */}
+            {lead.editorialSummary && (
+              <p className="text-sm text-gray-700 italic bg-gray-50 rounded-xl px-4 py-3 leading-relaxed">
+                "{lead.editorialSummary}"
+              </p>
+            )}
+
+            {/* Price level */}
+            {lead.priceLevel && lead.priceLevel !== 'PRICE_LEVEL_UNSPECIFIED' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Faixa de preço:</span>
+                <span className="font-semibold text-gray-800">
+                  {lead.priceLevel === 'PRICE_LEVEL_FREE'           && 'Gratuito'}
+                  {lead.priceLevel === 'PRICE_LEVEL_INEXPENSIVE'    && '$ — Econômico'}
+                  {lead.priceLevel === 'PRICE_LEVEL_MODERATE'       && '$$ — Moderado'}
+                  {lead.priceLevel === 'PRICE_LEVEL_EXPENSIVE'      && '$$$ — Caro'}
+                  {lead.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' && '$$$$ — Muito caro'}
+                </span>
+              </div>
+            )}
+
+            {/* Service attributes */}
+            {(() => {
+              const attrs = [
+                { key: 'servesBreakfast',     label: 'Café da manhã',     ok: lead.servesBreakfast },
+                { key: 'servesBrunch',         label: 'Brunch',            ok: lead.servesBrunch },
+                { key: 'servesLunch',          label: 'Almoço',            ok: lead.servesLunch },
+                { key: 'servesDinner',         label: 'Jantar',            ok: lead.servesDinner },
+                { key: 'servesBeer',           label: 'Cerveja',           ok: lead.servesBeer },
+                { key: 'servesWine',           label: 'Vinho',             ok: lead.servesWine },
+                { key: 'servesVegetarianFood', label: 'Opção vegetariana', ok: lead.servesVegetarianFood },
+              ].filter((a) => a.ok !== undefined);
+
+              if (attrs.length === 0) return null;
+              return (
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">O que serve (dados do Google):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {attrs.map((a) => (
+                      <span
+                        key={a.key}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                          a.ok
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-400 line-through'
+                        }`}
+                      >
+                        {a.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <p className="text-xs text-gray-300 leading-relaxed">
+              ℹ️ O cardápio completo (pratos e preços) não é disponibilizado pela API do Google.
+              Solicite ao cliente diretamente.
+            </p>
+          </Section>
+        )}
 
         {/* ── Briefing para Desenvolvimento de Site ── */}
         <Section title="Briefing para Desenvolvimento de Site">
