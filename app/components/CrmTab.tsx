@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PIPELINE_STAGES, type TrackedLead, type PipelineStage } from '../types/crm';
 import {
   getTrackedLeads,
@@ -208,26 +208,49 @@ function EditModal({
 function KanbanCard({
   lead,
   onClick,
+  onDragStart,
 }: {
-  lead:    TrackedLead;
-  onClick: () => void;
+  lead:        TrackedLead;
+  onClick:     () => void;
+  onDragStart: (id: string) => void;
 }) {
   const type   = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? lead.primaryType) : '';
   const bairro = extractNeighborhood(lead.address);
   const price  = fmtCurrency(lead.price);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('leadId', lead.id);
+    e.dataTransfer.effectAllowed = 'move';
+    setDragging(true);
+    onDragStart(lead.id);
+  };
 
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={() => setDragging(false)}
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md hover:border-green-200 transition-all group"
+      className={`bg-white rounded-xl shadow-sm border p-3 cursor-grab active:cursor-grabbing select-none
+        transition-all group
+        ${dragging
+          ? 'opacity-40 scale-95 border-gray-200'
+          : 'border-gray-100 hover:shadow-md hover:border-green-200'
+        }`}
     >
-      {/* Name */}
-      <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-green-700 transition-colors">
-        {lead.name}
-      </p>
+      {/* Drag handle hint */}
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-green-700 transition-colors flex-1">
+          {lead.name}
+        </p>
+        <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 6a2 2 0 100-4 2 2 0 000 4zM8 14a2 2 0 100-4 2 2 0 000 4zM8 22a2 2 0 100-4 2 2 0 000 4zM16 6a2 2 0 100-4 2 2 0 000 4zM16 14a2 2 0 100-4 2 2 0 000 4zM16 22a2 2 0 100-4 2 2 0 000 4z" />
+        </svg>
+      </div>
 
       {/* Score + type */}
-      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreColor(lead.leadScore)}`}>
           {lead.leadScore}pts
         </span>
@@ -281,11 +304,29 @@ function KanbanColumn({
   stage,
   leads,
   onCardClick,
+  onDragStart,
+  onDrop,
 }: {
   stage:       { key: PipelineStage; label: string; color: string; bg: string; border: string };
   leads:       TrackedLead[];
   onCardClick: (lead: TrackedLead) => void;
+  onDragStart: (id: string) => void;
+  onDrop:      (stageKey: PipelineStage) => void;
 }) {
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOver(true);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    onDrop(stage.key);
+  };
+
   return (
     <div className="flex-shrink-0 w-56 flex flex-col gap-2">
       {/* Column header */}
@@ -298,14 +339,33 @@ function KanbanColumn({
         </span>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-2 min-h-[100px]">
+      {/* Drop zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`flex flex-col gap-2 min-h-[120px] rounded-xl transition-all p-1 -m-1
+          ${dragOver
+            ? `${stage.bg} border-2 border-dashed ${stage.border} scale-[1.02]`
+            : 'border-2 border-transparent'
+          }`}
+      >
         {leads.map((lead) => (
-          <KanbanCard key={lead.id} lead={lead} onClick={() => onCardClick(lead)} />
+          <KanbanCard
+            key={lead.id}
+            lead={lead}
+            onClick={() => onCardClick(lead)}
+            onDragStart={onDragStart}
+          />
         ))}
-        {leads.length === 0 && (
+        {leads.length === 0 && !dragOver && (
           <div className="border-2 border-dashed border-gray-100 rounded-xl h-16 flex items-center justify-center">
-            <span className="text-xs text-gray-300">Vazio</span>
+            <span className="text-xs text-gray-300">Solte aqui</span>
+          </div>
+        )}
+        {dragOver && (
+          <div className={`border-2 border-dashed ${stage.border} rounded-xl h-14 flex items-center justify-center`}>
+            <span className={`text-xs font-medium ${stage.color}`}>Mover para {stage.label}</span>
           </div>
         )}
       </div>
@@ -316,9 +376,10 @@ function KanbanColumn({
 // ─── CRM Tab ──────────────────────────────────────────────────────────────────
 
 export default function CrmTab() {
-  const [leads,       setLeads]       = useState<TrackedLead[]>([]);
-  const [mounted,     setMounted]     = useState(false);
-  const [editingLead, setEditingLead] = useState<TrackedLead | null>(null);
+  const [leads,        setLeads]        = useState<TrackedLead[]>([]);
+  const [mounted,      setMounted]      = useState(false);
+  const [editingLead,  setEditingLead]  = useState<TrackedLead | null>(null);
+  const draggingId = useRef<string | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -338,6 +399,20 @@ export default function CrmTab() {
     const onStorage = () => setLeads(getTrackedLeads());
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const handleDragStart = useCallback((id: string) => {
+    draggingId.current = id;
+  }, []);
+
+  const handleDrop = useCallback((targetStage: PipelineStage) => {
+    const id = draggingId.current;
+    if (!id) return;
+    const lead = getTrackedLeads().find((l) => l.id === id);
+    if (!lead || lead.stage === targetStage) return;
+    updateTrackedLead(id, { stage: targetStage });
+    setLeads(getTrackedLeads());
+    draggingId.current = null;
   }, []);
 
   const handleUpdate = useCallback((id: string, updates: Partial<TrackedLead>) => {
@@ -443,6 +518,8 @@ export default function CrmTab() {
               stage={stage}
               leads={byStage[stage.key] ?? []}
               onCardClick={setEditingLead}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
             />
           ))}
         </div>
