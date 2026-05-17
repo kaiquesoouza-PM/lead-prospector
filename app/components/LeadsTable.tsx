@@ -14,9 +14,12 @@ type SortKey = 'leadScore' | 'rating' | 'userRatingCount' | 'photoCount' | 'name
 type SortDir = 'asc' | 'desc';
 
 const FLAG_LABELS: Record<LeadFlag, { label: string; color: string }> = {
-  'no-website':   { label: 'Sem Website',      color: 'bg-red-100 text-red-700' },
-  'few-reviews':  { label: 'Poucas Avaliações', color: 'bg-yellow-100 text-yellow-700' },
-  'few-photos':   { label: 'Poucas Fotos',      color: 'bg-orange-100 text-orange-700' },
+  'no-website':         { label: 'Sem Website',       color: 'bg-red-100 text-red-700' },
+  'few-reviews':        { label: 'Poucas Avaliações',  color: 'bg-yellow-100 text-yellow-700' },
+  'few-photos':         { label: 'Poucas Fotos',       color: 'bg-orange-100 text-orange-700' },
+  'zero-reviews':       { label: 'Sem Avaliações',     color: 'bg-gray-100 text-gray-500' },
+  'too-popular':        { label: '+5k Avaliações',     color: 'bg-purple-100 text-purple-700' },
+  'possible-delivery':  { label: 'Possível Delivery',  color: 'bg-blue-100 text-blue-700' },
 };
 
 function ScoreBadge({ score }: { score: number }) {
