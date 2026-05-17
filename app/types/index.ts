@@ -20,7 +20,7 @@ export const PROFILE_MAP: Record<LeadProfile, ProfileInfo> = {
   consolidated: {
     type:     'consolidated',
     label:    'Negócio Consolidado',
-    color:    'bg-blue-100 text-blue-800',
+    color:    'bg-blue-950/50 text-blue-400 border border-blue-800/40',
     pitch:    'Seu negócio já tem reconhecimento — um site profissional vai converter esse volume de clientes em receita recorrente online.',
     strategy: 'Focar em profissionalização, reservas online, cardápio digital e gestão da reputação.',
     websiteFocus: ['Cardápio digital interativo', 'Sistema de reservas', 'Galeria de fotos profissional', 'Depoimentos e avaliações', 'Programa de fidelidade'],
@@ -28,7 +28,7 @@ export const PROFILE_MAP: Record<LeadProfile, ProfileInfo> = {
   growing: {
     type:     'growing',
     label:    'Em Crescimento',
-    color:    'bg-amber-100 text-amber-800',
+    color:    'bg-amber-950/50 text-amber-400 border border-amber-800/40',
     pitch:    'Com um bom volume de clientes, falta só a presença digital para escalar de vez.',
     strategy: 'Combinar geração de novos clientes com fidelização dos atuais.',
     websiteFocus: ['Página "Sobre nós" com história', 'Cardápio com fotos', 'WhatsApp direto', 'Localização e horários', 'Redes sociais integradas'],
@@ -36,7 +36,7 @@ export const PROFILE_MAP: Record<LeadProfile, ProfileInfo> = {
   'low-visibility': {
     type:     'low-visibility',
     label:    'Baixa Visibilidade',
-    color:    'bg-red-100 text-red-800',
+    color:    'bg-red-950/50 text-red-400 border border-red-800/40',
     pitch:    'A ausência de site é o principal motivo pelo qual novos clientes não chegam até você. Quem busca online, não te encontra.',
     strategy: 'Focar em SEO local, Google Meu Negócio e presença básica para gerar descoberta.',
     websiteFocus: ['SEO local (aparecer no Google)', 'Cardápio simples', 'Botão WhatsApp', 'Endereço e mapa', 'Horário de funcionamento'],

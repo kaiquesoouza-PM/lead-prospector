@@ -34,10 +34,10 @@ const initialState: AppState = {
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-1">
-      <span className="text-xs text-gray-400 uppercase tracking-wide">{label}</span>
-      <span className="text-2xl font-bold text-gray-800">{value}</span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-4 flex flex-col gap-1">
+      <span className="text-xs text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className="text-2xl font-bold text-white">{value}</span>
+      {sub && <span className="text-xs text-gray-500">{sub}</span>}
     </div>
   );
 }
@@ -104,25 +104,25 @@ export default function HomePage() {
   const avgScore       = leads.length ? Math.round(leads.reduce((s, l) => s + l.leadScore, 0) / leads.length) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0a0a0a]">
       {/* ── Header ── */}
-      <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
+      <header className="bg-[#0d0d0d] border-b border-white/[0.06] sticky top-0 z-10 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="bg-green-600 text-white rounded-xl p-2">
+            <div className="bg-red-600 text-white rounded-xl p-2 shadow-lg shadow-red-900/30">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
             <div>
-              <h1 className="text-base font-bold text-gray-900 leading-tight">Lead Prospector</h1>
-              <p className="text-xs text-gray-400">Estabelecimentos sem presença digital</p>
+              <h1 className="text-base font-bold text-white leading-tight tracking-tight">Lead Prospector</h1>
+              <p className="text-xs text-gray-500">Estabelecimentos sem presença digital</p>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+          <div className="flex bg-[#1a1a1a] border border-white/[0.06] rounded-xl p-1 gap-1">
             {([
               { key: 'search', label: 'Busca' },
               { key: 'crm',    label: `Acompanhamento${capturedIds.size > 0 ? ` (${capturedIds.size})` : ''}` },
@@ -130,10 +130,10 @@ export default function HomePage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.key
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -155,8 +155,8 @@ export default function HomePage() {
             <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm flex items-start gap-3">
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <div className="bg-red-950/40 border border-red-800/60 text-red-400 rounded-xl px-5 py-4 text-sm flex items-start gap-3">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
                 <span>{error}</span>
@@ -206,8 +206,8 @@ export default function HomePage() {
             </div>
 
             {isLoading && (
-              <div className="bg-white rounded-2xl shadow-md p-10 flex flex-col items-center gap-4 text-gray-400">
-                <svg className="w-8 h-8 animate-spin text-green-500" fill="none" viewBox="0 0 24 24">
+              <div className="bg-[#111111] border border-white/[0.06] rounded-2xl p-10 flex flex-col items-center gap-4 text-gray-500">
+                <svg className="w-8 h-8 animate-spin text-red-600" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
@@ -221,9 +221,9 @@ export default function HomePage() {
         {activeTab === 'crm' && <CrmTab />}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 py-6 text-xs text-gray-400 text-center">
-        Lead Prospector MVP · Dados fornecidos pela{' '}
-        <a href="https://developers.google.com/maps/documentation/places/web-service/overview" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">
+      <footer className="max-w-7xl mx-auto px-4 py-6 text-xs text-gray-600 text-center">
+        Lead Prospector · Dados fornecidos pela{' '}
+        <a href="https://developers.google.com/maps/documentation/places/web-service/overview" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-400 transition-colors">
           Google Places API (New)
         </a>
       </footer>

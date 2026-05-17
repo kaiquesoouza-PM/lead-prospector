@@ -20,13 +20,13 @@ export interface StageInfo {
 }
 
 export const PIPELINE_STAGES: StageInfo[] = [
-  { key: 'captured',          label: 'Lead Capturado',      color: 'text-gray-700',   bg: 'bg-gray-100',   border: 'border-gray-300' },
-  { key: 'site_created',      label: 'Site Criado',         color: 'text-blue-700',   bg: 'bg-blue-100',   border: 'border-blue-300' },
-  { key: 'contacted',         label: 'Contato Realizado',   color: 'text-violet-700', bg: 'bg-violet-100', border: 'border-violet-300' },
-  { key: 'awaiting_response', label: 'Aguardando Resposta', color: 'text-yellow-700', bg: 'bg-yellow-100', border: 'border-yellow-300' },
-  { key: 'negotiating',       label: 'Em Negociação',       color: 'text-orange-700', bg: 'bg-orange-100', border: 'border-orange-300' },
-  { key: 'sold',              label: 'Venda Concluída',     color: 'text-green-700',  bg: 'bg-green-100',  border: 'border-green-300' },
-  { key: 'declined',          label: 'Declinado',           color: 'text-red-700',    bg: 'bg-red-100',    border: 'border-red-300' },
+  { key: 'captured',          label: 'Lead Capturado',      color: 'text-gray-400',   bg: 'bg-white/[0.04]',    border: 'border-white/[0.12]' },
+  { key: 'site_created',      label: 'Site Criado',         color: 'text-blue-400',   bg: 'bg-blue-950/40',     border: 'border-blue-700/40' },
+  { key: 'contacted',         label: 'Contato Realizado',   color: 'text-violet-400', bg: 'bg-violet-950/40',   border: 'border-violet-700/40' },
+  { key: 'awaiting_response', label: 'Aguardando Resposta', color: 'text-yellow-400', bg: 'bg-yellow-950/40',   border: 'border-yellow-700/40' },
+  { key: 'negotiating',       label: 'Em Negociação',       color: 'text-orange-400', bg: 'bg-orange-950/40',   border: 'border-orange-700/40' },
+  { key: 'sold',              label: 'Venda Concluída',     color: 'text-emerald-400', bg: 'bg-emerald-950/40', border: 'border-emerald-700/40' },
+  { key: 'declined',          label: 'Declinado',           color: 'text-red-400',    bg: 'bg-red-950/40',      border: 'border-red-700/40' },
 ];
 
 // ─── Tracked Lead ─────────────────────────────────────────────────────────────

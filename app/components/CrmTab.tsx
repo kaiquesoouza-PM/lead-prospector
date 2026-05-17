@@ -39,9 +39,9 @@ function extractNeighborhood(address: string): string {
 }
 
 function scoreColor(score: number) {
-  if (score >= 70) return 'bg-green-100 text-green-800';
-  if (score >= 40) return 'bg-amber-100 text-amber-800';
-  return 'bg-gray-100 text-gray-500';
+  if (score >= 70) return 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40';
+  if (score >= 40) return 'bg-amber-950/60 text-amber-400 border border-amber-800/40';
+  return 'bg-white/[0.04] text-gray-500 border border-white/[0.08]';
 }
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
@@ -83,16 +83,18 @@ function EditModal({
   const type = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? lead.primaryType) : '';
   const bairro = extractNeighborhood(lead.address);
 
+  const inputCls = "w-full bg-[#1a1a1a] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-600/40 focus:border-red-600/40 transition-colors";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#111111] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-bold text-gray-900">{lead.name}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{type}{bairro ? ` · ${bairro}` : ''}</p>
+            <h3 className="font-bold text-white">{lead.name}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{type}{bairro ? ` · ${bairro}` : ''}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+          <button onClick={onClose} className="text-gray-600 hover:text-white p-1 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -110,7 +112,7 @@ function EditModal({
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                   lead.stage === s.key
                     ? `${s.bg} ${s.color} ${s.border} border-2`
-                    : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-400'
+                    : 'bg-[#1a1a1a] text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300'
                 }`}
               >
                 {s.label}
@@ -126,14 +128,14 @@ function EditModal({
               <label className="block text-xs text-gray-500 mb-1">Telefone principal</label>
               <input type="text" value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={inputCls}
                 placeholder="(11) 99999-9999" />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Tel. alternativo</label>
               <input type="text" value={form.alternativePhone}
                 onChange={(e) => setForm((f) => ({ ...f, alternativePhone: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={inputCls}
                 placeholder="(11) 99999-9999" />
             </div>
           </div>
@@ -142,7 +144,7 @@ function EditModal({
             <label className="block text-xs text-gray-500 mb-1">E-mail</label>
             <input type="email" value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={inputCls}
               placeholder="contato@restaurante.com" />
           </div>
 
@@ -150,7 +152,7 @@ function EditModal({
             <label className="block text-xs text-gray-500 mb-1">Valor cobrado (R$)</label>
             <input type="text" value={form.price}
               onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={inputCls}
               placeholder="1500,00" />
           </div>
 
@@ -158,7 +160,7 @@ function EditModal({
             <label className="block text-xs text-gray-500 mb-1">URL do site criado</label>
             <input type="url" value={form.siteUrl}
               onChange={(e) => setForm((f) => ({ ...f, siteUrl: e.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className={inputCls}
               placeholder="https://restaurante.com.br" />
           </div>
 
@@ -167,13 +169,13 @@ function EditModal({
             <textarea value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              className={`${inputCls} resize-none`}
               placeholder="Observações, próximos passos..." />
           </div>
 
           {lead.googleMapsUri && (
             <a href={lead.googleMapsUri} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-blue-500 hover:underline">
+              className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 hover:underline transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
@@ -186,13 +188,15 @@ function EditModal({
         <div className="px-5 pb-5 flex items-center justify-between gap-3">
           <button
             onClick={() => { if (confirm(`Remover "${lead.name}"?`)) { onRemove(lead.id); onClose(); } }}
-            className="text-xs text-red-400 hover:text-red-600 transition-colors"
+            className="text-xs text-red-600 hover:text-red-400 transition-colors"
           >
             Remover
           </button>
           <button onClick={handleSave}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              saved ? 'bg-green-100 text-green-700' : 'bg-green-600 hover:bg-green-700 text-white'
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+              saved
+                ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/30'
+                : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20'
             }`}
           >
             {saved ? 'Salvo! ✓' : 'Salvar'}
@@ -232,19 +236,19 @@ function KanbanCard({
       onDragStart={handleDragStart}
       onDragEnd={() => setDragging(false)}
       onClick={onClick}
-      className={`bg-white rounded-xl shadow-sm border p-3 cursor-grab active:cursor-grabbing select-none
+      className={`bg-[#1a1a1a] rounded-xl border p-3 cursor-grab active:cursor-grabbing select-none
         transition-all group
         ${dragging
-          ? 'opacity-40 scale-95 border-gray-200'
-          : 'border-gray-100 hover:shadow-md hover:border-green-200'
+          ? 'opacity-40 scale-95 border-white/[0.06]'
+          : 'border-white/[0.08] hover:border-red-600/30 hover:shadow-lg hover:shadow-red-900/10'
         }`}
     >
       {/* Drag handle hint */}
       <div className="flex items-start justify-between gap-1 mb-1">
-        <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-green-700 transition-colors flex-1">
+        <p className="font-semibold text-white text-sm leading-snug line-clamp-2 group-hover:text-red-400 transition-colors flex-1">
           {lead.name}
         </p>
-        <svg className="w-3.5 h-3.5 text-gray-300 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5 text-gray-700 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M8 6a2 2 0 100-4 2 2 0 000 4zM8 14a2 2 0 100-4 2 2 0 000 4zM8 22a2 2 0 100-4 2 2 0 000 4zM16 6a2 2 0 100-4 2 2 0 000 4zM16 14a2 2 0 100-4 2 2 0 000 4zM16 22a2 2 0 100-4 2 2 0 000 4z" />
         </svg>
       </div>
@@ -255,7 +259,7 @@ function KanbanCard({
           {lead.leadScore}pts
         </span>
         {type && (
-          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{type}</span>
+          <span className="text-xs text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-full border border-white/[0.06]">{type}</span>
         )}
       </div>
 
@@ -271,7 +275,7 @@ function KanbanCard({
 
       {/* Price */}
       {price && (
-        <p className="text-xs font-semibold text-green-700 mt-1.5">{price}</p>
+        <p className="text-xs font-semibold text-emerald-400 mt-1.5">{price}</p>
       )}
 
       {/* Site URL */}
@@ -281,7 +285,7 @@ function KanbanCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="text-xs text-blue-500 hover:underline mt-1.5 flex items-center gap-1 truncate"
+          className="text-xs text-blue-400 hover:text-blue-300 hover:underline mt-1.5 flex items-center gap-1 truncate transition-colors"
         >
           <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -292,7 +296,7 @@ function KanbanCard({
 
       {/* Notes snippet */}
       {lead.notes && (
-        <p className="text-xs text-gray-400 mt-1.5 line-clamp-1 italic">"{lead.notes}"</p>
+        <p className="text-xs text-gray-600 mt-1.5 line-clamp-1 italic">"{lead.notes}"</p>
       )}
     </div>
   );
@@ -330,11 +334,11 @@ function KanbanColumn({
   return (
     <div className="flex-shrink-0 w-56 flex flex-col gap-2">
       {/* Column header */}
-      <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${stage.bg}`}>
+      <div className={`rounded-xl px-3 py-2 flex items-center justify-between border ${stage.bg} ${stage.border}`}>
         <span className={`text-xs font-bold uppercase tracking-wide ${stage.color}`}>
           {stage.label}
         </span>
-        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full bg-white/60 ${stage.color}`}>
+        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full bg-black/20 ${stage.color}`}>
           {leads.length}
         </span>
       </div>
@@ -346,7 +350,7 @@ function KanbanColumn({
         onDrop={handleDrop}
         className={`flex flex-col gap-2 min-h-[120px] rounded-xl transition-all p-1 -m-1
           ${dragOver
-            ? `${stage.bg} border-2 border-dashed ${stage.border} scale-[1.02]`
+            ? `bg-white/[0.02] border-2 border-dashed ${stage.border} scale-[1.02]`
             : 'border-2 border-transparent'
           }`}
       >
@@ -359,8 +363,8 @@ function KanbanColumn({
           />
         ))}
         {leads.length === 0 && !dragOver && (
-          <div className="border-2 border-dashed border-gray-100 rounded-xl h-16 flex items-center justify-center">
-            <span className="text-xs text-gray-300">Solte aqui</span>
+          <div className="border-2 border-dashed border-white/[0.06] rounded-xl h-16 flex items-center justify-center">
+            <span className="text-xs text-gray-700">Solte aqui</span>
           </div>
         )}
         {dragOver && (
@@ -448,13 +452,13 @@ export default function CrmTab() {
 
   if (leads.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-14 text-center text-gray-400">
-        <svg className="w-14 h-14 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <div className="bg-[#111111] border border-white/[0.06] rounded-2xl p-14 text-center text-gray-600">
+        <svg className="w-14 h-14 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
         </svg>
         <p className="font-medium text-gray-500">Nenhum lead capturado ainda.</p>
-        <p className="text-sm mt-1">
-          Na aba <strong>Busca</strong>, clique em um lead sem website e use <strong>"Capturar Lead"</strong>.
+        <p className="text-sm mt-1 text-gray-600">
+          Na aba <strong className="text-gray-400">Busca</strong>, clique em um lead sem website e use <strong className="text-gray-400">"Capturar Lead"</strong>.
         </p>
       </div>
     );
@@ -465,16 +469,16 @@ export default function CrmTab() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Kanban de Acompanhamento</h2>
-          <p className="text-sm text-gray-400">
+          <h2 className="text-lg font-bold text-white tracking-tight">Kanban de Acompanhamento</h2>
+          <p className="text-sm text-gray-500">
             {leads.length} lead{leads.length !== 1 ? 's' : ''} capturado{leads.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => exportCRMtoCSV(leads)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] bg-[#1a1a1a] text-sm font-medium text-gray-400 hover:text-white hover:border-white/20 transition-all"
         >
-          <svg className="w-4 h-4 text-green-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
           </svg>
           Exportar CSV
@@ -483,25 +487,25 @@ export default function CrmTab() {
 
       {/* ── Financial Summary ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Total</p>
-          <p className="text-2xl font-bold text-gray-800">{leads.length}</p>
-          <p className="text-xs text-gray-400">leads</p>
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+          <p className="text-2xl font-bold text-white">{leads.length}</p>
+          <p className="text-xs text-gray-600">leads</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Vendas</p>
-          <p className="text-2xl font-bold text-green-700">{sold.length}</p>
-          <p className="text-xs text-gray-400">concluídas</p>
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Vendas</p>
+          <p className="text-2xl font-bold text-emerald-400">{sold.length}</p>
+          <p className="text-xs text-gray-600">concluídas</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Receita</p>
-          <p className="text-2xl font-bold text-green-700">
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Receita</p>
+          <p className="text-2xl font-bold text-emerald-400">
             {totalEarned > 0 ? totalEarned.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Em Negociação</p>
-          <p className="text-2xl font-bold text-orange-600">
+        <div className="bg-[#111111] border border-white/[0.06] rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Em Negociação</p>
+          <p className="text-2xl font-bold text-orange-400">
             {pendingRevenue > 0
               ? pendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
               : `${negotiating.length}`}

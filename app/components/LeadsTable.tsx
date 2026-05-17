@@ -14,21 +14,21 @@ type SortKey = 'leadScore' | 'rating' | 'userRatingCount' | 'photoCount' | 'name
 type SortDir = 'asc' | 'desc';
 
 const FLAG_LABELS: Record<LeadFlag, { label: string; color: string }> = {
-  'no-website':         { label: 'Sem Website',       color: 'bg-red-100 text-red-700' },
-  'few-reviews':        { label: 'Poucas Avaliações',  color: 'bg-yellow-100 text-yellow-700' },
-  'few-photos':         { label: 'Poucas Fotos',       color: 'bg-orange-100 text-orange-700' },
-  'zero-reviews':       { label: 'Sem Avaliações',     color: 'bg-gray-100 text-gray-500' },
-  'too-popular':        { label: '+5k Avaliações',     color: 'bg-purple-100 text-purple-700' },
-  'possible-delivery':  { label: 'Possível Delivery',  color: 'bg-blue-100 text-blue-700' },
+  'no-website':         { label: 'Sem Website',       color: 'bg-red-950/60 text-red-400 border border-red-800/40' },
+  'few-reviews':        { label: 'Poucas Avaliações',  color: 'bg-yellow-950/60 text-yellow-400 border border-yellow-800/40' },
+  'few-photos':         { label: 'Poucas Fotos',       color: 'bg-orange-950/60 text-orange-400 border border-orange-800/40' },
+  'zero-reviews':       { label: 'Sem Avaliações',     color: 'bg-white/5 text-gray-500 border border-white/10' },
+  'too-popular':        { label: '+5k Avaliações',     color: 'bg-purple-950/60 text-purple-400 border border-purple-800/40' },
+  'possible-delivery':  { label: 'Possível Delivery',  color: 'bg-blue-950/60 text-blue-400 border border-blue-800/40' },
 };
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
     score >= 70
-      ? 'bg-green-100 text-green-800'
+      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40'
       : score >= 40
-      ? 'bg-yellow-100 text-yellow-800'
-      : 'bg-gray-100 text-gray-600';
+      ? 'bg-yellow-950/60 text-yellow-400 border border-yellow-800/40'
+      : 'bg-white/5 text-gray-500 border border-white/10';
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
@@ -38,13 +38,13 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 function StarRating({ rating }: { rating?: number }) {
-  if (!rating) return <span className="text-gray-400 text-xs">—</span>;
+  if (!rating) return <span className="text-gray-600 text-xs">—</span>;
   return (
     <span className="flex items-center gap-1 text-sm">
       <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
       </svg>
-      {rating.toFixed(1)}
+      <span className="text-white">{rating.toFixed(1)}</span>
     </span>
   );
 }
@@ -78,18 +78,18 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
     });
 
   const SortIcon = ({ k }: { k: SortKey }) => (
-    <span className="ml-1 opacity-50">
+    <span className="ml-1 opacity-40">
       {sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
     </span>
   );
 
   if (leads.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-md p-10 text-center text-gray-400">
-        <svg className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <div className="bg-[#111111] border border-white/[0.06] rounded-2xl p-10 text-center text-gray-600">
+        <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />
         </svg>
-        <p className="font-medium">Nenhum lead encontrado.</p>
+        <p className="font-medium text-gray-500">Nenhum lead encontrado.</p>
         <p className="text-sm mt-1">Realize uma busca para começar.</p>
       </div>
     );
@@ -98,14 +98,14 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
   const noWebsiteCount = leads.filter((l) => !l.hasWebsite).length;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+    <div className="bg-[#111111] border border-white/[0.06] rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+      <div className="px-5 py-4 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-gray-800">
+          <h3 className="font-semibold text-white">
             {sorted.length} resultado{sorted.length !== 1 ? 's' : ''}
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5">
             {noWebsiteCount} sem website · ordenado por score de lead
           </p>
         </div>
@@ -114,27 +114,27 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
           {/* Website filter */}
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
               filter === 'all'
-                ? 'bg-green-600 text-white border-green-600'
-                : 'text-gray-600 border-gray-300 hover:border-green-500'
+                ? 'bg-white text-gray-900 border-white'
+                : 'text-gray-500 border-white/[0.08] hover:border-white/30 hover:text-white'
             }`}
           >
             Todos ({leads.length})
           </button>
           <button
             onClick={() => setFilter('no-website')}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
               filter === 'no-website'
                 ? 'bg-red-600 text-white border-red-600'
-                : 'text-gray-600 border-gray-300 hover:border-red-400'
+                : 'text-gray-500 border-white/[0.08] hover:border-red-500/40 hover:text-red-400'
             }`}
           >
             Sem Website ({noWebsiteCount})
           </button>
 
           {/* Profile filter */}
-          <div className="w-px bg-gray-200 mx-1" />
+          <div className="w-px bg-white/10 mx-1" />
           {(['all', 'consolidated', 'growing', 'low-visibility'] as const).map((p) => {
             const info  = p !== 'all' ? PROFILE_MAP[p] : null;
             const count = p === 'all' ? leads.length : leads.filter((l) => l.profile === p).length;
@@ -143,10 +143,10 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
               <button
                 key={p}
                 onClick={() => setProfileFilter(p)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
                   active
-                    ? 'bg-gray-800 text-white border-gray-800'
-                    : 'text-gray-600 border-gray-300 hover:border-gray-500'
+                    ? 'bg-white/10 text-white border-white/20'
+                    : 'text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300'
                 }`}
               >
                 {p === 'all' ? `Todos perfis` : info!.label} ({count})
@@ -159,41 +159,41 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+          <thead className="border-b border-white/[0.06] text-xs text-gray-500 uppercase tracking-wider">
             <tr>
-              <th className="px-4 py-3 text-left cursor-pointer hover:text-gray-800" onClick={() => handleSort('name')}>
+              <th className="px-4 py-3 text-left cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>
                 Nome <SortIcon k="name" />
               </th>
               <th className="px-4 py-3 text-left">Telefone</th>
               <th className="px-4 py-3 text-left">Endereço</th>
-              <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('rating')}>
+              <th className="px-4 py-3 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('rating')}>
                 Nota <SortIcon k="rating" />
               </th>
-              <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('userRatingCount')}>
+              <th className="px-4 py-3 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('userRatingCount')}>
                 Aval. <SortIcon k="userRatingCount" />
               </th>
-              <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('photoCount')}>
+              <th className="px-4 py-3 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('photoCount')}>
                 Fotos <SortIcon k="photoCount" />
               </th>
               <th className="px-4 py-3 text-left">Perfil</th>
               <th className="px-4 py-3 text-center">Status</th>
-              <th className="px-4 py-3 text-center cursor-pointer hover:text-gray-800" onClick={() => handleSort('leadScore')}>
+              <th className="px-4 py-3 text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('leadScore')}>
                 Score <SortIcon k="leadScore" />
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-white/[0.04]">
             {sorted.map((lead) => (
               <tr
                 key={lead.id}
                 onClick={() => onSelectLead?.(lead)}
-                className={`cursor-pointer transition-colors hover:bg-green-50 ${
-                  selectedLeadId === lead.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                className={`cursor-pointer transition-colors hover:bg-white/[0.03] ${
+                  selectedLeadId === lead.id ? 'bg-red-950/20 border-l-2 border-l-red-600' : ''
                 }`}
               >
                 {/* Name */}
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800 max-w-[180px] truncate" title={lead.name}>
+                  <div className="font-medium text-white max-w-[180px] truncate" title={lead.name}>
                     {lead.name}
                   </div>
                   {lead.googleMapsUri && (
@@ -202,7 +202,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-blue-500 hover:underline"
+                      className="text-xs text-blue-500 hover:text-blue-400 hover:underline transition-colors"
                     >
                       Ver no Maps
                     </a>
@@ -210,17 +210,17 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                 </td>
 
                 {/* Phone */}
-                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
                   {lead.phone ? (
                     <a
                       href={`tel:${lead.phone}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="hover:text-green-700"
+                      className="hover:text-white transition-colors"
                     >
                       {lead.phone}
                     </a>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-700">—</span>
                   )}
                 </td>
 
@@ -237,13 +237,13 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                 </td>
 
                 {/* Reviews */}
-                <td className="px-4 py-3 text-center text-gray-600">
-                  {lead.userRatingCount > 0 ? lead.userRatingCount.toLocaleString('pt-BR') : '—'}
+                <td className="px-4 py-3 text-center text-gray-400">
+                  {lead.userRatingCount > 0 ? lead.userRatingCount.toLocaleString('pt-BR') : <span className="text-gray-700">—</span>}
                 </td>
 
                 {/* Photos */}
-                <td className="px-4 py-3 text-center text-gray-600">
-                  {lead.photoCount > 0 ? lead.photoCount : '—'}
+                <td className="px-4 py-3 text-center text-gray-400">
+                  {lead.photoCount > 0 ? lead.photoCount : <span className="text-gray-700">—</span>}
                 </td>
 
                 {/* Profile */}
@@ -265,7 +265,7 @@ export default function LeadsTable({ leads, onSelectLead, selectedLeadId }: Lead
                       </span>
                     ))}
                     {lead.flags.length === 0 && (
-                      <span className="text-gray-300 text-xs">OK</span>
+                      <span className="text-gray-600 text-xs">OK</span>
                     )}
                   </div>
                 </td>

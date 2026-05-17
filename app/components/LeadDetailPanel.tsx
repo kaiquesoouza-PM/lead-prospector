@@ -23,16 +23,16 @@ function InfoRow({ icon, label, value, href }: {
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="text-gray-400 mt-0.5 flex-shrink-0">{icon}</span>
+      <span className="text-gray-600 mt-0.5 flex-shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-xs text-gray-400">{label}</p>
+        <p className="text-xs text-gray-500">{label}</p>
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline break-all">
+            className="text-sm text-blue-400 hover:text-blue-300 hover:underline break-all transition-colors">
             {value}
           </a>
         ) : (
-          <p className="text-sm text-gray-800 break-words">{value}</p>
+          <p className="text-sm text-gray-200 break-words">{value}</p>
         )}
       </div>
     </div>
@@ -42,7 +42,7 @@ function InfoRow({ icon, label, value, href }: {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">
+      <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-white/[0.06] pb-1">
         {title}
       </h3>
       {children}
@@ -55,7 +55,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function suggestDomain(name: string): string {
   const slug = name
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, '')
     .trim()
     .split(/\s+/)
@@ -130,27 +130,27 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 flex flex-col h-full overflow-hidden">
+    <div className="bg-[#111111] border border-white/[0.06] rounded-2xl flex flex-col h-full overflow-hidden">
 
       {/* ── Header ── */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+      <div className="px-5 py-4 border-b border-white/[0.06] flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${profile.color}`}>
               {profile.label}
             </span>
-            <span className="text-xs text-gray-400">{typeLabel}</span>
+            <span className="text-xs text-gray-500">{typeLabel}</span>
           </div>
-          <h2 className="text-base font-bold text-gray-900 mt-1 leading-snug">{lead.name}</h2>
+          <h2 className="text-base font-bold text-white mt-1 leading-snug">{lead.name}</h2>
         </div>
         {!lead.hasWebsite && onCapture && (
           <button
             onClick={() => onCapture(lead)}
             disabled={isCaptured}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
               isCaptured
-                ? 'bg-green-100 text-green-700 cursor-default'
-                : 'bg-green-600 hover:bg-green-700 text-white'
+                ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 cursor-default'
+                : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/30'
             }`}
           >
             {isCaptured ? (
@@ -173,7 +173,7 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
 
         <button
           onClick={onClose}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex-shrink-0 text-gray-600 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -185,15 +185,15 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
 
         {/* ── Pitch de Prospecção ── */}
-        <div className={`rounded-xl p-4 ${profile.color} bg-opacity-30`}>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-1 opacity-70">
+        <div className="rounded-xl p-4 bg-white/[0.04] border border-white/[0.06]">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-gray-500">
             Argumento de Venda
           </p>
-          <p className="text-sm font-medium leading-relaxed">
+          <p className="text-sm font-medium leading-relaxed text-gray-200">
             "{profile.pitch}"
           </p>
-          <p className="text-xs mt-2 opacity-70 leading-relaxed">
-            <strong>Estratégia:</strong> {profile.strategy}
+          <p className="text-xs mt-2 text-gray-500 leading-relaxed">
+            <strong className="text-gray-400">Estratégia:</strong> {profile.strategy}
           </p>
         </div>
 
@@ -237,12 +237,12 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
             />
           ) : (
             <div className="flex items-center gap-3">
-              <span className="text-red-400 mt-0.5">
+              <span className="text-red-500 mt-0.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
               </span>
               <div>
-                <p className="text-xs text-gray-400">Website</p>
-                <p className="text-sm font-semibold text-red-600">Não possui — oportunidade!</p>
+                <p className="text-xs text-gray-500">Website</p>
+                <p className="text-sm font-semibold text-red-500">Não possui — oportunidade!</p>
               </div>
             </div>
           )}
@@ -260,25 +260,25 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
         {/* ── Métricas do Google ── */}
         <Section title="Métricas no Google">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400">Nota</p>
-              <p className="text-xl font-bold text-gray-800">{lead.rating?.toFixed(1) ?? '—'}</p>
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500">Nota</p>
+              <p className="text-xl font-bold text-white">{lead.rating?.toFixed(1) ?? '—'}</p>
               <p className="text-xs text-yellow-500">★ estrelas</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400">Avaliações</p>
-              <p className="text-xl font-bold text-gray-800">{lead.userRatingCount.toLocaleString('pt-BR')}</p>
-              <p className="text-xs text-gray-400">reviews</p>
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500">Avaliações</p>
+              <p className="text-xl font-bold text-white">{lead.userRatingCount.toLocaleString('pt-BR')}</p>
+              <p className="text-xs text-gray-500">reviews</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xs text-gray-400">Fotos</p>
-              <p className="text-xl font-bold text-gray-800">{lead.photoCount}</p>
-              <p className="text-xs text-gray-400">no Google</p>
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-500">Fotos</p>
+              <p className="text-xl font-bold text-white">{lead.photoCount}</p>
+              <p className="text-xs text-gray-500">no Google</p>
             </div>
           </div>
 
           {/* Volume context */}
-          <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600">
+          <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 text-sm text-gray-400">
             {lead.userRatingCount >= 100 && (
               <p>Alta movimentação — capacidade de pagamento elevada. Aborde com proposta profissional.</p>
             )}
@@ -294,10 +294,10 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
         {/* ── Exportar para Lovable (apenas sem website) ── */}
         {!lead.hasWebsite && <Section title="Exportar para Lovable">
           <p className="text-xs text-gray-500 leading-relaxed">
-            Gere um prompt completo para colar no <strong>Lovable.dev</strong> e criar o site deste estabelecimento com IA.
+            Gere um prompt completo para colar no <strong className="text-gray-300">Lovable.dev</strong> e criar o site deste estabelecimento com IA.
           </p>
           {lead.photoRefs.length > 0 && (
-            <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+            <p className="text-xs text-blue-400 bg-blue-950/30 border border-blue-800/30 rounded-lg px-3 py-2">
               📸 {lead.photoRefs.length} fotos do Google serão incluídas automaticamente no prompt
             </p>
           )}
@@ -305,12 +305,12 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
             <button
               onClick={handleCopyPrompt}
               disabled={fetchingPrompt}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                 copied
-                  ? 'bg-green-600 text-white border-green-600'
+                  ? 'bg-emerald-600 text-white border-emerald-600'
                   : fetchingPrompt
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-green-500 hover:text-green-700'
+                  ? 'bg-white/[0.04] text-gray-600 border-white/[0.06] cursor-wait'
+                  : 'bg-white/[0.04] text-gray-300 border-white/[0.08] hover:border-red-600/50 hover:text-white hover:bg-white/[0.06]'
               }`}
             >
               {copied ? (
@@ -340,10 +340,10 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
             <button
               onClick={handleDownloadBriefing}
               disabled={fetchingPrompt}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                 fetchingPrompt
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700'
+                  ? 'bg-white/[0.04] text-gray-600 border-white/[0.06] cursor-wait'
+                  : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:border-blue-500/40 hover:text-blue-400'
               }`}
               title="Baixar como arquivo .txt"
             >
@@ -363,7 +363,7 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
           <Section title="Cardápio & Serviços (Google)">
             {/* Editorial summary */}
             {lead.editorialSummary && (
-              <p className="text-sm text-gray-700 italic bg-gray-50 rounded-xl px-4 py-3 leading-relaxed">
+              <p className="text-sm text-gray-400 italic bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 leading-relaxed">
                 "{lead.editorialSummary}"
               </p>
             )}
@@ -371,8 +371,8 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
             {/* Price level */}
             {lead.priceLevel && lead.priceLevel !== 'PRICE_LEVEL_UNSPECIFIED' && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Faixa de preço:</span>
-                <span className="font-semibold text-gray-800">
+                <span className="text-xs text-gray-500">Faixa de preço:</span>
+                <span className="font-semibold text-gray-200">
                   {lead.priceLevel === 'PRICE_LEVEL_FREE'           && 'Gratuito'}
                   {lead.priceLevel === 'PRICE_LEVEL_INEXPENSIVE'    && '$ — Econômico'}
                   {lead.priceLevel === 'PRICE_LEVEL_MODERATE'       && '$$ — Moderado'}
@@ -397,15 +397,15 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
               if (attrs.length === 0) return null;
               return (
                 <div>
-                  <p className="text-xs text-gray-400 mb-2">O que serve (dados do Google):</p>
+                  <p className="text-xs text-gray-500 mb-2">O que serve (dados do Google):</p>
                   <div className="flex flex-wrap gap-2">
                     {attrs.map((a) => (
                       <span
                         key={a.key}
                         className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                           a.ok
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-400 line-through'
+                            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/30'
+                            : 'bg-white/[0.04] text-gray-600 border border-white/[0.06] line-through'
                         }`}
                       >
                         {a.label}
@@ -416,7 +416,7 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
               );
             })()}
 
-            <p className="text-xs text-gray-300 leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed">
               ℹ️ O cardápio completo (pratos e preços) não é disponibilizado pela API do Google.
               Solicite ao cliente diretamente.
             </p>
@@ -428,12 +428,12 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
           <div className="space-y-3">
 
             {/* Domain */}
-            <div className="flex items-center justify-between bg-green-50 rounded-xl px-4 py-3">
+            <div className="flex items-center justify-between bg-red-950/20 border border-red-800/20 rounded-xl px-4 py-3">
               <div>
                 <p className="text-xs text-gray-500">Domínio sugerido</p>
-                <p className="text-sm font-mono font-bold text-green-700">{domain}</p>
+                <p className="text-sm font-mono font-bold text-red-400">{domain}</p>
               </div>
-              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
               </svg>
             </div>
@@ -443,8 +443,8 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
               <p className="text-xs text-gray-500 mb-2">Seções prioritárias para o site</p>
               <ul className="space-y-1.5">
                 {profile.websiteFocus.map((section, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
-                    <span className="w-5 h-5 rounded-full bg-green-100 text-green-700 text-xs flex items-center justify-center font-bold flex-shrink-0">
+                  <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                    <span className="w-5 h-5 rounded-full bg-red-950/40 border border-red-800/30 text-red-400 text-xs flex items-center justify-center font-bold flex-shrink-0">
                       {i + 1}
                     </span>
                     {section}
@@ -468,14 +468,14 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
             </div>
 
             {/* Info for the brief */}
-            <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-xs text-gray-600">
-              <p><strong>Nome:</strong> {lead.name}</p>
-              <p><strong>Categoria:</strong> {typeLabel}</p>
-              <p><strong>Endereço:</strong> {lead.address}</p>
-              {lead.phone && <p><strong>Telefone:</strong> {lead.phone}</p>}
-              {lead.rating && <p><strong>Nota Google:</strong> {lead.rating.toFixed(1)} estrelas ({lead.userRatingCount} avaliações)</p>}
-              <p><strong>Tem website:</strong> {lead.hasWebsite ? `Sim — ${lead.website}` : 'Não'}</p>
-              <p><strong>Perfil:</strong> {PROFILE_MAP[lead.profile].label}</p>
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 space-y-1.5 text-xs text-gray-400">
+              <p><strong className="text-gray-300">Nome:</strong> {lead.name}</p>
+              <p><strong className="text-gray-300">Categoria:</strong> {typeLabel}</p>
+              <p><strong className="text-gray-300">Endereço:</strong> {lead.address}</p>
+              {lead.phone && <p><strong className="text-gray-300">Telefone:</strong> {lead.phone}</p>}
+              {lead.rating && <p><strong className="text-gray-300">Nota Google:</strong> {lead.rating.toFixed(1)} estrelas ({lead.userRatingCount} avaliações)</p>}
+              <p><strong className="text-gray-300">Tem website:</strong> {lead.hasWebsite ? `Sim — ${lead.website}` : 'Não'}</p>
+              <p><strong className="text-gray-300">Perfil:</strong> {PROFILE_MAP[lead.profile].label}</p>
             </div>
           </div>
         </Section>
@@ -489,7 +489,9 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
 function Tag({ label, ok }: { label: string; ok: boolean }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-      ok ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+      ok
+        ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/30'
+        : 'bg-white/[0.04] text-gray-600 border border-white/[0.06]'
     }`}>
       {ok ? '✓' : '✗'} {label}
     </span>

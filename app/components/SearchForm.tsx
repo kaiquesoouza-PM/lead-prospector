@@ -52,10 +52,10 @@ const RADIUS_OPTIONS = [
 ];
 
 export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
-  const [address, setAddress]       = useState('');
-  const [radius,  setRadius]        = useState(5_000);
-  const [types,   setTypes]         = useState<PlaceType[]>([...ALL_TYPES]);
-  const [useGPS,  setUseGPS]        = useState(false);
+  const [address, setAddress] = useState('');
+  const [radius,  setRadius]  = useState(5_000);
+  const [types,   setTypes]   = useState<PlaceType[]>([...ALL_TYPES]);
+  const [useGPS,  setUseGPS]  = useState(false);
 
   const toggleType = (type: PlaceType) => {
     setTypes((prev) =>
@@ -73,13 +73,13 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl shadow-md p-6 space-y-5"
+      className="bg-[#111111] border border-white/[0.06] rounded-2xl p-6 space-y-5"
     >
-      <h2 className="text-lg font-semibold text-gray-800">Configurar Busca</h2>
+      <h2 className="text-lg font-semibold text-white tracking-tight">Configurar Busca</h2>
 
       {/* Location */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-400">
           Localização
         </label>
 
@@ -87,29 +87,19 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <button
             type="button"
             onClick={() => setUseGPS((v) => !v)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
               useGPS
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'
+                ? 'bg-red-600 text-white border-red-600 shadow-lg shadow-red-900/30'
+                : 'bg-[#1a1a1a] text-gray-400 border-white/[0.08] hover:border-red-600/50 hover:text-white'
             }`}
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4a8 8 0 100 16A8 8 0 0012 4zm0 0v2m0 12v2M4 12H2m20 0h-2"
-              />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4a8 8 0 100 16A8 8 0 0012 4zm0 0v2m0 12v2M4 12H2m20 0h-2" />
             </svg>
             Usar GPS
           </button>
 
-          <span className="text-xs text-gray-400">ou</span>
+          <span className="text-xs text-gray-600">ou</span>
 
           <input
             type="text"
@@ -120,14 +110,14 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
             }}
             disabled={useGPS}
             placeholder="Ex: Av. Paulista, São Paulo, SP"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50 disabled:text-gray-400"
+            className="flex-1 bg-[#1a1a1a] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-600/50 focus:border-red-600/50 disabled:opacity-40 transition-colors"
           />
         </div>
       </div>
 
       {/* Radius */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-400">
           Raio de Busca
         </label>
         <div className="flex flex-wrap gap-2">
@@ -136,10 +126,10 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               key={opt.value}
               type="button"
               onClick={() => setRadius(opt.value)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
                 radius === opt.value
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'
+                  ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-900/30'
+                  : 'bg-[#1a1a1a] text-gray-400 border-white/[0.08] hover:border-red-600/40 hover:text-white'
               }`}
             >
               {opt.label}
@@ -150,7 +140,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
 
       {/* Types */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-gray-400">
           Tipos de Estabelecimento
         </label>
         <div className="flex flex-wrap gap-2">
@@ -159,10 +149,10 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
               key={type}
               type="button"
               onClick={() => toggleType(type)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
                 types.includes(type)
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'
+                  ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-900/30'
+                  : 'bg-[#1a1a1a] text-gray-400 border-white/[0.08] hover:border-red-600/40 hover:text-white'
               }`}
             >
               {PLACE_TYPE_LABELS[type]}
@@ -175,21 +165,13 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
       <button
         type="submit"
         disabled={isLoading || (!useGPS && !address.trim()) || types.length === 0}
-        className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="w-full py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-[#1a1a1a] disabled:text-gray-600 disabled:border disabled:border-white/[0.06] text-white font-semibold rounded-xl transition-all text-sm shadow-lg shadow-red-900/20 hover:shadow-red-900/30"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12" cy="12" r="10"
-                stroke="currentColor" strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8H4z"
-              />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
             Buscando...
           </span>
