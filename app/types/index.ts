@@ -59,7 +59,13 @@ export type PlaceType =
   | 'juice_bar'
   | 'brunch_restaurant';
 
-export type LeadFlag = 'no-website' | 'few-reviews' | 'few-photos';
+export type LeadFlag =
+  | 'no-website'
+  | 'few-reviews'
+  | 'few-photos'
+  | 'zero-reviews'       // 0 avaliações — negócio fantasma ou muito pequeno
+  | 'too-popular'        // 5 000+ avaliações — provavelmente não precisa de site
+  | 'possible-delivery'; // pouquíssimas avaliações — possivelmente só delivery
 
 // ─── Raw Google Places API (New) shape ───────────────────────────────────────
 

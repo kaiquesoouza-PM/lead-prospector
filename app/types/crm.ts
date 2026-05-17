@@ -50,6 +50,7 @@ export interface TrackedLead {
   stage:            PipelineStage;
   price?:           number;
   notes:            string;
+  siteUrl?:         string; // URL do site criado para o cliente
   capturedAt:       string; // ISO date
   updatedAt:        string; // ISO date
 }
