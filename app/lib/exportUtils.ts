@@ -87,7 +87,6 @@ export function exportToJSON(leads: Lead[]): void {
 
 /** Extrai bairro e cidade de um endereço brasileiro. */
 function parseAddress(address: string): { neighborhood: string; city: string } {
-  // Formato: "Rua X, 123 - Bairro, Cidade - Estado, CEP"
   const dashParts = address.split(' - ');
   let neighborhood = '';
   let city = '';
@@ -100,6 +99,27 @@ function parseAddress(address: string): { neighborhood: string; city: string } {
     city = dashParts[2].split(',')[0].trim();
   }
   return { neighborhood, city };
+}
+
+/**
+ * Classifica as fotos por tipo com base na posição.
+ * No Google Places, photos[0] é a foto de capa (geralmente fachada).
+ * As seguintes tendem a ser ambiente e pratos.
+ */
+function classifyPhotos(urls: string[]): {
+  facade:   { url: string; index: number } | null;
+  interior: { url: string; index: number }[];
+  food:     { url: string; index: number }[];
+  others:   { url: string; index: number }[];
+} {
+  if (urls.length === 0) return { facade: null, interior: [], food: [], others: [] };
+
+  const facade   = { url: urls[0], index: 0 };
+  const interior = urls.slice(1, 3).map((url, i) => ({ url, index: i + 1 }));
+  const food     = urls.slice(3, 6).map((url, i) => ({ url, index: i + 3 }));
+  const others   = urls.slice(6).map((url, i) => ({ url, index: i + 6 }));
+
+  return { facade, interior, food, others };
 }
 
 /**
@@ -131,27 +151,65 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
   };
   const priceLevel = lead.priceLevel ? (priceMap[lead.priceLevel] ?? '') : '';
 
-  // ── Fotos ──────────────────────────────────────────────────────────────────
+  // ── Fotos classificadas ────────────────────────────────────────────────────
   const hasRealPhotos = resolvedPhotoUrls && resolvedPhotoUrls.length > 0;
-  const photoNote = hasRealPhotos
-    ? `// ✅ ${resolvedPhotoUrls!.length} fotos REAIS do Google Places incluídas — use photos[0] como fachada principal`
-    : '// ⚠️ Fotos placeholder — substitua pelas fotos reais do estabelecimento';
-  const photoEntries = hasRealPhotos
-    ? resolvedPhotoUrls!.map((url) => `    "${url}"`).join(',\n')
-    : [
-        '    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200"',
-        '    "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800"',
-        '    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800"',
-        '    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"',
-        '    "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=800"',
-      ].join(',\n');
+  const classified    = hasRealPhotos ? classifyPhotos(resolvedPhotoUrls!) : null;
+
+  // Bloco de fotos tipadas para o mock
+  const buildPhotoBlock = () => {
+    if (!classified) {
+      return `// ⚠️ FOTOS NÃO DISPONÍVEIS — solicite as fotos reais ao cliente antes de prosseguir.
+  // NÃO gere imagens por IA. NÃO use Unsplash. Aguarde as fotos reais.
+  photos: {
+    facade:   null,
+    interior: [],
+    food:     [],
+    all:      []
+  }`;
+    }
+
+    const facadeStr   = classified.facade
+      ? `"${classified.facade.url}"`
+      : 'null';
+    const interiorStr = classified.interior.map(p => `    "${p.url}"`).join(',\n');
+    const foodStr     = classified.food.map(p => `    "${p.url}"`).join(',\n');
+    const othersStr   = classified.others.map(p => `    "${p.url}"`).join(',\n');
+    const allStr      = resolvedPhotoUrls!.map(u => `    "${u}"`).join(',\n');
+
+    return `// ✅ ${resolvedPhotoUrls!.length} FOTOS REAIS do Google Places — USE OBRIGATORIAMENTE estas URLs.
+  // PROIBIDO substituir por imagens de IA ou Unsplash. Use APENAS as URLs abaixo.
+  photos: {
+    // FACHADA — foto de capa do Google Maps (use para Hero Section e extração de logo/paleta)
+    facade: ${facadeStr},
+
+    // AMBIENTE / INTERIOR
+    interior: [
+${interiorStr || '      // (sem fotos de interior disponíveis)'}
+    ],
+
+    // PRATOS / PRODUTOS
+    food: [
+${foodStr || '      // (sem fotos de pratos disponíveis)'}
+    ],
+
+    // DEMAIS FOTOS
+    others: [
+${othersStr || '      // (sem fotos adicionais)'}
+    ],
+
+    // TODAS AS FOTOS (para galeria completa)
+    all: [
+${allStr}
+    ]
+  }`;
+  };
 
   // ── Mock Data ──────────────────────────────────────────────────────────────
   const mockData = `const restaurantData = {
   // ── Identidade ────────────────────────────────────────────────────────────
   name:         "${lead.name}",
   category:     "${typeLabel}",
-  description:  "${lead.editorialSummary ?? `${typeLabel} localizado(a) em ${neighborhood || lead.address}. Venha nos visitar!`}",
+  description:  "${lead.editorialSummary ?? `${typeLabel} localizado(a) em ${neighborhood || lead.address}.`}",
   ${priceLevel ? `priceLevel:   "${priceLevel}",` : ''}
   ${serviceAttrs ? `services:     "${serviceAttrs}",` : ''}
 
@@ -161,7 +219,6 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
   address:      "${lead.address}",
   neighborhood: "${neighborhood}",
   city:         "${city}",
-  website:      "",  // a ser preenchido após criação do site
   googleMapsUrl:"${mapsUrl}",
   coordinates: {
     lat: ${lead.location.lat},
@@ -214,29 +271,41 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
     }
   ],
 
-  ${photoNote}
-  photos: [
-${photoEntries}
-  ],
+  ${buildPhotoBlock()},
 
   // ── Cardápio ─────────────────────────────────────────────────────────────
-  // SE este array estiver VAZIO, gere automaticamente um cardápio fictício
-  // premium compatível com o nicho "${typeLabel}".
-  // SE possuir dados reais, renderize-os dinamicamente.
+  // SE vazio → gere cardápio fictício premium para "${typeLabel}" (sem imagens de IA).
+  // SE preenchido → renderize os dados reais.
   menu_items: []
 };`;
 
+  const facadeUrl = classified?.facade?.url ?? null;
+
   return `Atue como um Desenvolvedor Front-end React Sênior, UI/UX Designer, Diretor Criativo e Especialista em Branding Digital focado no nicho de gastronomia premium.
 
-Sua missão é criar uma aplicação web Single Page Application (SPA) altamente sofisticada, responsiva e orientada para conversão, utilizando React + Tailwind CSS + Lucide Icons.
+Crie uma SPA (Single Page Application) sofisticada, responsiva e orientada para conversão em React + Tailwind CSS + Lucide Icons para:
 
-O website é para: **${lead.name}** — ${typeLabel}${neighborhood ? ` no bairro ${neighborhood}` : ''}${city ? `, ${city}` : ''}.${lead.editorialSummary ? `\nDescrição do Google: "${lead.editorialSummary}"` : ''}${serviceAttrs ? `\nServiços: ${serviceAttrs}` : ''}${priceLevel ? `\nFaixa de preço: ${priceLevel}` : ''}
-Nota Google: ${lead.rating?.toFixed(1) ?? '—'} ⭐ (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações)
-
-O resultado final NÃO deve parecer um template genérico. Deve parecer criado por uma agência digital premium especializada em restaurantes.
+**${lead.name}** — ${typeLabel}${neighborhood ? ` · ${neighborhood}` : ''}${city ? `, ${city}` : ''}
+Nota Google: ${lead.rating?.toFixed(1) ?? '—'} ⭐ (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações)${lead.editorialSummary ? `\nDescrição: "${lead.editorialSummary}"` : ''}${serviceAttrs ? `\nServiços: ${serviceAttrs}` : ''}
 
 ====================================================================
-MOCK DATA — USE EXATAMENTE ESTES DADOS NO TOPO DO CÓDIGO
+⚠️ REGRA ABSOLUTA — FOTOS REAIS OBRIGATÓRIAS
+====================================================================
+
+${hasRealPhotos ? `ESTAS SÃO AS FOTOS REAIS DO ESTABELECIMENTO extraídas do Google Places API.
+Você DEVE usar EXCLUSIVAMENTE as URLs abaixo. É TERMINANTEMENTE PROIBIDO:
+❌ Gerar imagens por IA
+❌ Usar imagens do Unsplash, Pexels ou qualquer banco de imagens
+❌ Criar imagens placeholder
+
+Todas as ${resolvedPhotoUrls!.length} URLs abaixo são fotos reais e públicas do estabelecimento.
+Use-as exatamente como estão, sem modificação.` : `⚠️ FOTOS NÃO DISPONÍVEIS NESTE PROMPT.
+NÃO gere imagens por IA. NÃO use Unsplash.
+Deixe todos os campos de imagem em branco (src="") com comentário "// foto real pendente".
+O cliente irá fornecer as fotos reais posteriormente.`}
+
+====================================================================
+MOCK DATA — COLE NO TOPO DO ARQUIVO
 ====================================================================
 
 \`\`\`javascript
@@ -244,165 +313,149 @@ ${mockData}
 \`\`\`
 
 ====================================================================
-OBJETIVO PRINCIPAL
+${hasRealPhotos && facadeUrl ? `ANÁLISE DA FACHADA PARA BRANDING
 ====================================================================
 
-Transformar os dados do restaurantData acima em uma experiência digital premium.
+A foto da fachada do estabelecimento é:
+${facadeUrl}
 
-O site deve:
-- transmitir desejo gastronômico imediato;
-- gerar vontade de visitar o local;
-- parecer sofisticado e cinematográfico;
-- destacar prova social (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações, nota ${lead.rating?.toFixed(1) ?? '—'});
-- maximizar conversão via WhatsApp: ${waUrl}
+Ao processar o código, analise visualmente esta imagem para extrair:
 
+1. PALETA DE CORES
+   - Cor dominante da fachada → cor primária do site
+   - Cor secundária/contraste → cor dos botões e destaques
+   - Tom geral (quente/frio/neutro) → define o mood visual
+
+2. ESTILO ARQUITETÔNICO
+   - Moderno/industrial → Sans-serif bold, visual urbano
+   - Rústico/artesanal → Serif ou script, visual aconchegante
+   - Sofisticado/clássico → Serif elegante, visual premium
+   - Jovem/casual → Sans-serif moderna, visual descolado
+
+3. EXTRAÇÃO DO LOGO / LETREIRO
+   - Procure na foto o letreiro, placa ou logomarca visível na fachada
+   - Se identificar o logotipo real, recrie-o como logo tipográfica SVG
+   - Mantenha as cores, fonte e estilo do logo original
+   - Se não identificar logo, crie uma logo tipográfica condizente com o estilo da fachada
+
+USE ESTA ANÁLISE para definir automaticamente toda a identidade visual do site.
+
+====================================================================` : `LOGO E BRANDING
 ====================================================================
-INTELIGÊNCIA VISUAL BASEADA NA FACHADA
-====================================================================
 
-Utilize automaticamente photos[0] como referência visual principal (fachada).
-Analise visualmente e defina automaticamente:
-- paleta principal do site baseada nas cores da fachada;
-- temperatura visual (quente/fria/neutra);
-- estilo tipográfico compatível com o nível do estabelecimento;
-- intensidade do overlay da Hero Section.
+Crie uma LOGO TIPOGRÁFICA em SVG baseada no nome "${lead.name}":
+${lead.primaryType === 'restaurant' || lead.primaryType === 'pizza_restaurant' ? '→ Serif elegante (transmite tradição e sofisticação)' :
+  lead.primaryType === 'hamburger_restaurant' || lead.primaryType === 'fast_food_restaurant' ? '→ Sans-serif bold e impactante (moderna e urbana)' :
+  lead.primaryType === 'cafe' || lead.primaryType === 'bakery' || lead.primaryType === 'brunch_restaurant' ? '→ Tipografia orgânica/artesanal (aconchegante)' :
+  lead.primaryType === 'bar' || lead.primaryType === 'juice_bar' ? '→ Tipografia cinematográfica e impactante' :
+  '→ Serif elegante (gastronomia premium)'}
 
-====================================================================
-LOGO E BRANDING DINÂMICO
-====================================================================
-
-NÃO use imagem estática de logo. Crie uma LOGO TIPOGRÁFICA em SVG ou texto estilizado.
-
-Para "${typeLabel}":
-${lead.primaryType === 'restaurant' || lead.primaryType === 'pizza_restaurant' ? '→ Serif elegante, transmitindo tradição e sofisticação' : ''}
-${lead.primaryType === 'hamburger_restaurant' || lead.primaryType === 'fast_food_restaurant' ? '→ Sans-serif forte e impactante, moderna e urbana' : ''}
-${lead.primaryType === 'cafe' || lead.primaryType === 'bakery' || lead.primaryType === 'brunch_restaurant' ? '→ Tipografia orgânica/artesanal, aconchegante' : ''}
-${lead.primaryType === 'bar' || lead.primaryType === 'juice_bar' ? '→ Tipografia cinematográfica, noturna e impactante' : ''}
-${!lead.primaryType ? '→ Serif elegante compatível com gastronomia premium' : ''}
-
-====================================================================
+====================================================================`}
 ESTRUTURA DA PÁGINA
 ====================================================================
 
 1. NAVBAR PREMIUM
-   - Logo tipográfica à esquerda
+   - Logo (tipográfica ou extraída da fachada)
    - Links: Início | Cardápio | Avaliações | Galeria | Contato
-   - Botão CTA WhatsApp no topo direito
+   - Botão WhatsApp no topo direito
    - Menu hamburguer mobile
 
-2. HERO SECTION FULL SCREEN CINEMATOGRÁFICA
-   - Background: photos[0] (fachada do estabelecimento)
-   - Overlay escuro elegante
-   - Headline emocional forte (baseada no nome e nicho)
-   - Subheadline sofisticada
-   - Badge dinâmico: opening_hours.open_now → "Aberto Agora" (verde) ou "Fechado" (vermelho)
-   - Nota Google: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ com ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
-   - CTA principal: WhatsApp → ${waUrl}
-   - CTA secundário: "Ver Cardápio" (scroll suave)
+2. HERO SECTION FULL SCREEN
+   - Background: restaurantData.photos.facade${facadeUrl ? ` → "${facadeUrl}"` : ' (pendente)'}
+   - Overlay escuro elegante para legibilidade
+   - Headline emocional forte
+   - Badge dinâmico: opening_hours.open_now → "Aberto Agora" (verde) ou "Fechado no Momento" (vermelho)
+   - Nota: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
+   - CTA: WhatsApp → ${waUrl}
+   - CTA secundário: "Ver Cardápio" (âncora suave)
    - Micro animações de entrada (fade + slide up)
 
 3. SOBRE O ESTABELECIMENTO
    - Texto: restaurantData.description
-   - Atributos de serviço: restaurantData.services
-   - Visual premium com foto lateral
+   - Serviços: restaurantData.services
+   - Foto de ambiente: restaurantData.photos.interior[0]${classified?.interior[0] ? ` → "${classified.interior[0].url}"` : ''}
 
-4. DESTAQUE DA EXPERIÊNCIA / AMBIENTE
-   - Grid com photos[1], photos[2], photos[3]
-   - Texto emocional sobre a atmosfera
-   - Efeito parallax ou zoom suave no hover
+4. GALERIA DE AMBIENTE
+   - Fotos: restaurantData.photos.interior[]${classified && classified.interior.length > 0 ? `\n   - URLs disponíveis: ${classified.interior.map(p => p.url).join(', ')}` : ''}
+   - Grid responsivo com hover zoom suave
 
-5. CARDÁPIO DINÂMICO (LÓGICA HÍBRIDA OBRIGATÓRIA)
-   SE menu_items.length > 0:
-     - Renderizar itens reais do cardápio
-     - Mostrar: nome, descrição, preço em R$, imagem, categoria
-   SE menu_items estiver vazio (caso atual):
-     - Gerar automaticamente cardápio fictício premium para "${typeLabel}"
-     - Criar categorias, nomes, descrições e preços compatíveis
-     - Usar imagens do Unsplash relacionadas ao nicho
-   - Tabs interativas por categoria
-   - Filtros visuais
-   - Transições suaves
+5. CARDÁPIO (LÓGICA OBRIGATÓRIA)
+   SE menu_items.length > 0 → renderizar dados reais
+   SE vazio (caso atual) → gerar cardápio fictício premium para "${typeLabel}"
+     - NÃO use imagens de IA nem Unsplash para os pratos
+     - Use emojis ou ícones Lucide como visual dos pratos
+     - Nomes, descrições e preços compatíveis com o nicho
+   - Tabs por categoria + filtros visuais + transições suaves
 
 6. PROVA SOCIAL — GOOGLE REVIEWS
    - Título: "O que nossos clientes dizem no Google"
-   - Selo: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações · ícone G do Google
-   - Carrossel ou grid com reviews do restaurantData.reviews[]
-   - Cada card: avatar (profile_photo_url), nome, estrelas douradas, texto
+   - Selo: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
+   - Ícone G colorido do Google
+   - Carrossel/grid com restaurantData.reviews[]
+   - Cada card: avatar, nome, estrelas douradas, texto
 
-7. GALERIA DE FOTOS
-   - Grid masonry responsivo com todas as fotos de restaurantData.photos[]
-   - Hover com zoom suave e overlay elegante
-   - Lightbox ao clicar (navegação prev/next, botão fechar)
+7. GALERIA DE FOTOS COMPLETA
+   - Usar restaurantData.photos.all[] — TODAS as fotos reais
+   ${hasRealPhotos ? `- URLs reais disponíveis: ${resolvedPhotoUrls!.length} fotos` : '- Aguardar fotos reais do cliente'}
+   - Grid masonry responsivo
+   - Lightbox com navegação prev/next ao clicar
 
 8. HORÁRIOS DE FUNCIONAMENTO
    - Lista de opening_hours.weekday_text[]
    - Badge dinâmico open_now
-   - Design clean e legível
 
 9. LOCALIZAÇÃO & CONTATO
    - Endereço: "${lead.address}"
-   - Botão telefone: tel:${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : '[TELEFONE]'}
+   - Telefone clicável: tel:${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : '[INSERIR]'}
    - Botão "Como Chegar": ${mapsUrl}
-   - Ícones redes sociais (Instagram, Facebook, TikTok) — links em branco
-   - Mapa embed (iframe Google Maps ou link visual)
+   - Redes sociais (Instagram, Facebook, WhatsApp) — deixar href em branco
 
 10. CTA FINAL
     - Seção dark cinematográfica
-    - Headline de conversão
     - Botão WhatsApp grande: ${waUrl}
 
 11. FOOTER PREMIUM
-    - Logo, endereço, horários resumidos
-    - Links legais
-    - Redes sociais
+    - Logo, endereço, horários resumidos, redes sociais
 
 ====================================================================
 BOTÃO WHATSAPP FLUTUANTE
 ====================================================================
 
-Fixo no canto inferior direito em TODAS as telas.
+Fixo canto inferior direito em TODAS as telas.
 Link: ${waUrl}
-Pulse animation suave para chamar atenção.
+Pulse animation suave.
 
 ====================================================================
-COPYWRITING (OBRIGATÓRIO)
+COPYWRITING
 ====================================================================
 
 NUNCA use textos genéricos.
-Use linguagem sensorial e gastronômica premium.
-Headlines devem despertar desejo e emoção.
-Tom: sofisticado, humano, convidativo.
-
-Exemplos de headlines para "${lead.name}":
-- "Uma experiência que vai além do sabor"
-- "Onde cada prato conta uma história"
-- "O melhor da gastronomia, a dois passos de você"
+Linguagem sensorial e gastronômica. Tom sofisticado e humano.
+Headlines devem despertar desejo. Sem menção a "reservas".
 
 ====================================================================
 SKELETON SCREEN
 ====================================================================
 
-Simule 1.5s de loading com skeleton animado (shimmer effect) antes de renderizar os dados.
+1.5s de loading com shimmer effect antes de renderizar.
 
 ====================================================================
-SEO LOCAL AUTOMÁTICO
+SEO LOCAL
 ====================================================================
 
-Gerar meta tags:
 - title: "${lead.name} — ${typeLabel}${neighborhood ? ` em ${neighborhood}` : ''}${city ? `, ${city}` : ''}"
-- description: "${lead.editorialSummary ?? `${typeLabel} com ${lead.rating?.toFixed(1) ?? ''}⭐ e ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações no Google. ${neighborhood ? `Localizado em ${neighborhood}` : ''}.`}"
-- keywords: "${typeLabel.toLowerCase()}, ${neighborhood}, ${city}, gastronomia, restaurante"
+- description: "${lead.editorialSummary ?? `${typeLabel} com nota ${lead.rating?.toFixed(1) ?? ''} ⭐ e ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações no Google.${neighborhood ? ` Em ${neighborhood}` : ''}.`}"
 
 ====================================================================
-REQUISITOS TÉCNICOS FINAIS
+REQUISITOS TÉCNICOS
 ====================================================================
 
 - React + Tailwind CSS + Lucide Icons
-- Componentização limpa e reutilizável
 - Mobile-First absoluto
-- Transições suaves em todos os elementos interativos
-- Código organizado, moderno e pronto para produção
+- Componentização limpa
+- Código moderno e pronto para produção
 - Performance otimizada
+- ZERO imagens geradas por IA
 `;
 }
 
