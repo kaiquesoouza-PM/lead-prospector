@@ -89,7 +89,7 @@ export function exportToJSON(leads: Lead[]): void {
  * Generates a detailed V2 prompt in Portuguese for the Lovable AI website builder.
  * Instructs Lovable to build a dynamic React SPA consuming Google Places API data.
  */
-export function generateLovablePrompt(lead: Lead): string {
+export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]): string {
   const typeLabel = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? 'Estabelecimento') : 'Estabelecimento';
   const whatsapp  = lead.phone?.replace(/\D/g, '');
 
@@ -119,6 +119,21 @@ export function generateLovablePrompt(lead: Lead): string {
     lead.profile === 'consolidated' ? 'sofisticado e elegante, transmitindo tradição e qualidade' :
     lead.profile === 'growing'      ? 'moderno e dinâmico, transmitindo crescimento e credibilidade' :
                                       'acolhedor e autêntico, transmitindo proximidade com o bairro';
+
+  // Build photos array: use real Google URLs if available, otherwise placeholders
+  const photoEntries = resolvedPhotoUrls && resolvedPhotoUrls.length > 0
+    ? resolvedPhotoUrls.map((url) => `"${url}"`).join(',\n    ')
+    : [
+        '"https://placehold.co/1200x800/1a1a1a/ffffff?text=Foto+Fachada"',
+        '"https://placehold.co/800x600/2d2d2d/ffffff?text=Foto+Ambiente"',
+        '"https://placehold.co/800x600/3d2d1a/ffffff?text=Foto+Prato+01"',
+        '"https://placehold.co/800x600/1a2d1a/ffffff?text=Foto+Prato+02"',
+        '"https://placehold.co/800x600/1a1a3d/ffffff?text=Foto+Interno"',
+      ].join(',\n    ');
+
+  const photosNote = resolvedPhotoUrls && resolvedPhotoUrls.length > 0
+    ? `// ✅ ${resolvedPhotoUrls.length} fotos reais do Google Places já incluídas abaixo`
+    : '// ⚠️ Fotos placeholder — substitua pelas fotos reais do estabelecimento';
 
   // Mock data block with real lead data pre-filled
   const mockData = `{
@@ -166,12 +181,9 @@ export function generateLovablePrompt(lead: Lead): string {
       profile_photo_url: "https://ui-avatars.com/api/?name=Joao+P&background=random"
     }
   ],
+  ${photosNote}
   photos: [
-    "https://placehold.co/1200x800/1a1a1a/ffffff?text=Foto+Fachada",
-    "https://placehold.co/800x600/2d2d2d/ffffff?text=Foto+Ambiente",
-    "https://placehold.co/800x600/3d2d1a/ffffff?text=Foto+Prato+01",
-    "https://placehold.co/800x600/1a2d1a/ffffff?text=Foto+Prato+02",
-    "https://placehold.co/800x600/1a1a3d/ffffff?text=Foto+Interno"
+    ${photoEntries}
   ]
 }`;
 
@@ -228,8 +240,8 @@ REQUISITOS TÉCNICOS:
 
 // ─── Briefing individual (TXT) ────────────────────────────────────────────────
 
-export function exportLeadBriefing(lead: Lead): void {
-  const prompt   = generateLovablePrompt(lead);
+export function exportLeadBriefing(lead: Lead, resolvedPhotoUrls?: string[]): void {
+  const prompt   = generateLovablePrompt(lead, resolvedPhotoUrls);
   const filename = `briefing-${lead.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.txt`;
   downloadFile(prompt, filename, 'text/plain;charset=utf-8');
 }

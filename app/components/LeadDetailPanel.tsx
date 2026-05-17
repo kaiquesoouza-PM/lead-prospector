@@ -88,14 +88,45 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
   const typeLabel  = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? lead.primaryType) : 'Estabelecimento';
   const domain     = suggestDomain(lead.name);
   const whatsapp   = lead.phone?.replace(/\D/g, '');
-  const [copied, setCopied] = useState(false);
+  const [copied,          setCopied]          = useState(false);
+  const [fetchingPrompt,  setFetchingPrompt]  = useState(false);
+  const [resolvedPhotos,  setResolvedPhotos]  = useState<string[]>([]);
 
-  const handleCopyPrompt = () => {
-    const prompt = generateLovablePrompt(lead);
+  /** Fetches photo URLs once and caches them in state. */
+  async function getPhotoUrls(): Promise<string[]> {
+    if (resolvedPhotos.length > 0) return resolvedPhotos;
+    if (lead.photoRefs.length === 0) return [];
+    try {
+      const res  = await fetch('/api/photos', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ refs: lead.photoRefs }),
+      });
+      const data = await res.json() as { urls: string[] };
+      const urls = data.urls ?? [];
+      setResolvedPhotos(urls);
+      return urls;
+    } catch {
+      return [];
+    }
+  }
+
+  const handleCopyPrompt = async () => {
+    setFetchingPrompt(true);
+    const photoUrls = await getPhotoUrls();
+    const prompt = generateLovablePrompt(lead, photoUrls);
     navigator.clipboard.writeText(prompt).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
+    setFetchingPrompt(false);
+  };
+
+  const handleDownloadBriefing = async () => {
+    setFetchingPrompt(true);
+    const photoUrls = await getPhotoUrls();
+    exportLeadBriefing(lead, photoUrls);
+    setFetchingPrompt(false);
   };
 
   return (
@@ -265,12 +296,20 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
           <p className="text-xs text-gray-500 leading-relaxed">
             Gere um prompt completo para colar no <strong>Lovable.dev</strong> e criar o site deste estabelecimento com IA.
           </p>
+          {lead.photoRefs.length > 0 && (
+            <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+              📸 {lead.photoRefs.length} fotos do Google serão incluídas automaticamente no prompt
+            </p>
+          )}
           <div className="flex gap-2">
             <button
               onClick={handleCopyPrompt}
+              disabled={fetchingPrompt}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
                 copied
                   ? 'bg-green-600 text-white border-green-600'
+                  : fetchingPrompt
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-green-500 hover:text-green-700'
               }`}
             >
@@ -280,6 +319,14 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
                   Copiado!
+                </>
+              ) : fetchingPrompt ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Buscando fotos…
                 </>
               ) : (
                 <>
@@ -291,8 +338,13 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
               )}
             </button>
             <button
-              onClick={() => exportLeadBriefing(lead)}
-              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 border-gray-300 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700 transition-colors"
+              onClick={handleDownloadBriefing}
+              disabled={fetchingPrompt}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                fetchingPrompt
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-500 hover:text-blue-700'
+              }`}
               title="Baixar como arquivo .txt"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
