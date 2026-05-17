@@ -85,67 +85,96 @@ export function exportToJSON(leads: Lead[]): void {
 
 // ─── Lovable Prompt ───────────────────────────────────────────────────────────
 
+/** Extrai bairro e cidade de um endereço brasileiro. */
+function parseAddress(address: string): { neighborhood: string; city: string } {
+  // Formato: "Rua X, 123 - Bairro, Cidade - Estado, CEP"
+  const dashParts = address.split(' - ');
+  let neighborhood = '';
+  let city = '';
+  if (dashParts.length >= 2) {
+    const part2 = dashParts[1].split(',');
+    neighborhood = part2[0].trim();
+    city = part2[1]?.trim() ?? '';
+  }
+  if (!city && dashParts.length >= 3) {
+    city = dashParts[2].split(',')[0].trim();
+  }
+  return { neighborhood, city };
+}
+
 /**
- * Generates a detailed V2 prompt in Portuguese for the Lovable AI website builder.
- * Instructs Lovable to build a dynamic React SPA consuming Google Places API data.
+ * Generates a V3 premium prompt for Lovable AI website builder.
+ * Full creative direction + mock data pre-filled with real Google Places data.
  */
 export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]): string {
-  const typeLabel = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? 'Estabelecimento') : 'Estabelecimento';
-  const whatsapp  = lead.phone?.replace(/\D/g, '');
-
-  const priceMap: Record<string, string> = {
-    PRICE_LEVEL_FREE:           'Gratuito',
-    PRICE_LEVEL_INEXPENSIVE:    'econômico ($)',
-    PRICE_LEVEL_MODERATE:       'preço moderado ($$)',
-    PRICE_LEVEL_EXPENSIVE:      'caro ($$$)',
-    PRICE_LEVEL_VERY_EXPENSIVE: 'muito caro ($$$$)',
-  };
-
-  const priceLabel = lead.priceLevel && lead.priceLevel !== 'PRICE_LEVEL_UNSPECIFIED'
-    ? priceMap[lead.priceLevel] ?? ''
-    : '';
+  const typeLabel  = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? 'Estabelecimento') : 'Estabelecimento';
+  const whatsapp   = lead.phone?.replace(/\D/g, '');
+  const { neighborhood, city } = parseAddress(lead.address);
+  const mapsUrl    = lead.googleMapsUri ?? `https://maps.google.com/?q=${encodeURIComponent(lead.address)}`;
+  const waUrl      = whatsapp ? `https://wa.me/55${whatsapp}` : 'https://wa.me/[NUMERO]';
 
   const serviceAttrs = [
     lead.servesBreakfast     && 'café da manhã',
     lead.servesBrunch        && 'brunch',
     lead.servesLunch         && 'almoço',
     lead.servesDinner        && 'jantar',
-    lead.servesBeer          && 'cerveja',
-    lead.servesWine          && 'vinho',
+    lead.servesBeer          && 'cerveja artesanal',
+    lead.servesWine          && 'carta de vinhos',
     lead.servesVegetarianFood && 'opções vegetarianas',
   ].filter(Boolean).join(', ');
 
-  const designStyle =
-    lead.profile === 'consolidated' ? 'sofisticado e elegante, transmitindo tradição e qualidade' :
-    lead.profile === 'growing'      ? 'moderno e dinâmico, transmitindo crescimento e credibilidade' :
-                                      'acolhedor e autêntico, transmitindo proximidade com o bairro';
+  const priceMap: Record<string, string> = {
+    PRICE_LEVEL_INEXPENSIVE:    'econômico',
+    PRICE_LEVEL_MODERATE:       'moderado',
+    PRICE_LEVEL_EXPENSIVE:      'premium',
+    PRICE_LEVEL_VERY_EXPENSIVE: 'luxo',
+  };
+  const priceLevel = lead.priceLevel ? (priceMap[lead.priceLevel] ?? '') : '';
 
-  // Build photos array: use real Google URLs if available, otherwise placeholders
-  const photoEntries = resolvedPhotoUrls && resolvedPhotoUrls.length > 0
-    ? resolvedPhotoUrls.map((url) => `"${url}"`).join(',\n    ')
-    : [
-        '"https://placehold.co/1200x800/1a1a1a/ffffff?text=Foto+Fachada"',
-        '"https://placehold.co/800x600/2d2d2d/ffffff?text=Foto+Ambiente"',
-        '"https://placehold.co/800x600/3d2d1a/ffffff?text=Foto+Prato+01"',
-        '"https://placehold.co/800x600/1a2d1a/ffffff?text=Foto+Prato+02"',
-        '"https://placehold.co/800x600/1a1a3d/ffffff?text=Foto+Interno"',
-      ].join(',\n    ');
-
-  const photosNote = resolvedPhotoUrls && resolvedPhotoUrls.length > 0
-    ? `// ✅ ${resolvedPhotoUrls.length} fotos reais do Google Places já incluídas abaixo`
+  // ── Fotos ──────────────────────────────────────────────────────────────────
+  const hasRealPhotos = resolvedPhotoUrls && resolvedPhotoUrls.length > 0;
+  const photoNote = hasRealPhotos
+    ? `// ✅ ${resolvedPhotoUrls!.length} fotos REAIS do Google Places incluídas — use photos[0] como fachada principal`
     : '// ⚠️ Fotos placeholder — substitua pelas fotos reais do estabelecimento';
+  const photoEntries = hasRealPhotos
+    ? resolvedPhotoUrls!.map((url) => `    "${url}"`).join(',\n')
+    : [
+        '    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200"',
+        '    "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800"',
+        '    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800"',
+        '    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"',
+        '    "https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=800"',
+      ].join(',\n');
 
-  // Mock data block with real lead data pre-filled
-  const mockData = `{
-  name: "${lead.name}",
-  formatted_phone_number: "${lead.phone ?? '(número não disponível)'}",
-  international_phone_number: "${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : ''}",
-  formatted_address: "${lead.address}",
-  geometry: {
-    location: { lat: ${lead.location.lat}, lng: ${lead.location.lng} }
+  // ── Mock Data ──────────────────────────────────────────────────────────────
+  const mockData = `const restaurantData = {
+  // ── Identidade ────────────────────────────────────────────────────────────
+  name:         "${lead.name}",
+  category:     "${typeLabel}",
+  description:  "${lead.editorialSummary ?? `${typeLabel} localizado(a) em ${neighborhood || lead.address}. Venha nos visitar!`}",
+  ${priceLevel ? `priceLevel:   "${priceLevel}",` : ''}
+  ${serviceAttrs ? `services:     "${serviceAttrs}",` : ''}
+
+  // ── Contato & Localização ─────────────────────────────────────────────────
+  phone:        "${lead.phone ?? ''}",
+  whatsapp:     "${whatsapp ? '55' + whatsapp : ''}",
+  address:      "${lead.address}",
+  neighborhood: "${neighborhood}",
+  city:         "${city}",
+  website:      "",  // a ser preenchido após criação do site
+  googleMapsUrl:"${mapsUrl}",
+  coordinates: {
+    lat: ${lead.location.lat},
+    lng: ${lead.location.lng}
   },
+
+  // ── Avaliações Google ─────────────────────────────────────────────────────
+  rating:             ${lead.rating?.toFixed(1) ?? '4.5'},
+  user_ratings_total: ${lead.userRatingCount},
+
+  // ── Horários de Funcionamento ─────────────────────────────────────────────
   opening_hours: {
-    open_now: true, // atualizar conforme horário real
+    open_now: true,   // badge dinâmico — atualizar conforme horário real
     weekday_text: [
       "Segunda-feira: 11:00 – 23:00",
       "Terça-feira: 11:00 – 23:00",
@@ -156,85 +185,224 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
       "Domingo: 12:00 – 22:00"
     ]
   },
-  rating: ${lead.rating?.toFixed(1) ?? '4.5'},
-  user_ratings_total: ${lead.userRatingCount},
+
+  // ── Reviews Google ────────────────────────────────────────────────────────
   reviews: [
     {
-      author_name: "Cliente Google",
-      rating: 5,
-      text: "Lugar incrível! Comida deliciosa e atendimento excelente. Super recomendo!",
-      relative_time_description: "há 1 semana",
-      profile_photo_url: "https://ui-avatars.com/api/?name=Cliente+Google&background=random"
+      author_name:  "Maria Silva",
+      rating:       5,
+      text:         "Experiência incrível! Comida deliciosa, ambiente aconchegante e atendimento impecável. Voltarei com certeza!",
+      profile_photo_url: "https://ui-avatars.com/api/?name=Maria+Silva&background=e74c3c&color=fff"
     },
     {
-      author_name: "Maria S.",
-      rating: 5,
-      text: "Melhor ${typeLabel.toLowerCase()} da região! Voltarei com certeza.",
-      relative_time_description: "há 2 semanas",
-      profile_photo_url: "https://ui-avatars.com/api/?name=Maria+S&background=random"
+      author_name:  "João Pereira",
+      rating:       5,
+      text:         "Melhor ${typeLabel.toLowerCase()} da região! Ingredientes frescos, porções generosas e sabor incomparável.",
+      profile_photo_url: "https://ui-avatars.com/api/?name=Joao+Pereira&background=3498db&color=fff"
     },
     {
-      author_name: "João P.",
-      rating: 4,
-      text: "Muito bom! Ambiente agradável e preço justo. Recomendo a todos.",
-      relative_time_description: "há 1 mês",
-      profile_photo_url: "https://ui-avatars.com/api/?name=Joao+P&background=random"
+      author_name:  "Ana Costa",
+      rating:       4,
+      text:         "Ótimo ambiente e atendimento muito simpático. Os pratos são muito bem apresentados. Super recomendo!",
+      profile_photo_url: "https://ui-avatars.com/api/?name=Ana+Costa&background=27ae60&color=fff"
+    },
+    {
+      author_name:  "Carlos Mendes",
+      rating:       5,
+      text:         "Lugar maravilhoso! Perfeito para um jantar especial. A experiência gastronômica é completa.",
+      profile_photo_url: "https://ui-avatars.com/api/?name=Carlos+Mendes&background=8e44ad&color=fff"
     }
   ],
-  ${photosNote}
+
+  ${photoNote}
   photos: [
-    ${photoEntries}
-  ]
-}`;
+${photoEntries}
+  ],
 
-  return `Atue como um Desenvolvedor Front-end React Sênior e UI/UX Designer. Crie uma aplicação web Single Page (SPA) responsiva (Mobile-First) para ${lead.name}, um(a) ${typeLabel}${priceLabel ? ` de nível ${priceLabel}` : ''}.${lead.editorialSummary ? `\n\nDescrição do estabelecimento (Google): "${lead.editorialSummary}"` : ''}${serviceAttrs ? `\nServiços oferecidos: ${serviceAttrs}` : ''}
+  // ── Cardápio ─────────────────────────────────────────────────────────────
+  // SE este array estiver VAZIO, gere automaticamente um cardápio fictício
+  // premium compatível com o nicho "${typeLabel}".
+  // SE possuir dados reais, renderize-os dinamicamente.
+  menu_items: []
+};`;
 
-Esta aplicação deve ser totalmente DINÂMICA e consumir dados de uma API que retorna as informações do estabelecimento via Google Places API.
+  return `Atue como um Desenvolvedor Front-end React Sênior, UI/UX Designer, Diretor Criativo e Especialista em Branding Digital focado no nicho de gastronomia premium.
 
-Use o seguinte MOCK DE DADOS já preenchido com as informações reais do estabelecimento no topo do arquivo principal (ou em um arquivo de serviço separado):
+Sua missão é criar uma aplicação web Single Page Application (SPA) altamente sofisticada, responsiva e orientada para conversão, utilizando React + Tailwind CSS + Lucide Icons.
+
+O website é para: **${lead.name}** — ${typeLabel}${neighborhood ? ` no bairro ${neighborhood}` : ''}${city ? `, ${city}` : ''}.${lead.editorialSummary ? `\nDescrição do Google: "${lead.editorialSummary}"` : ''}${serviceAttrs ? `\nServiços: ${serviceAttrs}` : ''}${priceLevel ? `\nFaixa de preço: ${priceLevel}` : ''}
+Nota Google: ${lead.rating?.toFixed(1) ?? '—'} ⭐ (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações)
+
+O resultado final NÃO deve parecer um template genérico. Deve parecer criado por uma agência digital premium especializada em restaurantes.
+
+====================================================================
+MOCK DATA — USE EXATAMENTE ESTES DADOS NO TOPO DO CÓDIGO
+====================================================================
 
 \`\`\`javascript
-const ESTABLISHMENT_DATA = ${mockData};
+${mockData}
 \`\`\`
 
-ESTRUTURA E REGRAS DE RENDERIZAÇÃO DINÂMICA:
+====================================================================
+OBJETIVO PRINCIPAL
+====================================================================
 
-1. HERO SECTION & IDENTIDADE:
-- O título principal deve renderizar dinamicamente o \`name\` vindo do mock.
-- Utilize a primeira foto do array \`photos[]\` como imagem de fundo da Hero Section com overlay escuro para legibilidade.
-- Exiba um badge dinâmico baseado em \`opening_hours.open_now\`: se true → "Aberto Agora" (verde), se false → "Fechado no Momento" (vermelho).
-- Adicione botão de WhatsApp com link \`https://wa.me/${whatsapp ? '55' + whatsapp : '[NUMERO]'}\` e botão "Como Chegar" apontando para ${lead.googleMapsUri ?? `https://maps.google.com/?q=${encodeURIComponent(lead.address)}`}.
+Transformar os dados do restaurantData acima em uma experiência digital premium.
 
-2. CARDÁPIO INTERATIVO:
-- Crie uma seção de cardápio com abas (ex: Destaques, Pratos Principais, Bebidas, Sobremesas) e filtros visuais.
-- Use dados mockados/locais para os itens do cardápio com nome, descrição, preço e foto placeholder.
-- Adicione animação suave ao trocar de aba.
+O site deve:
+- transmitir desejo gastronômico imediato;
+- gerar vontade de visitar o local;
+- parecer sofisticado e cinematográfico;
+- destacar prova social (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações, nota ${lead.rating?.toFixed(1) ?? '—'});
+- maximizar conversão via WhatsApp: ${waUrl}
 
-3. SEÇÃO DE AVALIAÇÕES DO GOOGLE:
-- Crie um carrossel ou grid elegante "O que nossos clientes dizem no Google".
-- Renderize dinamicamente os dados do array \`reviews[]\`: foto do autor (\`profile_photo_url\`), nome, estrelas douradas baseadas no \`rating\` individual e texto do comentário.
-- No topo da seção exiba o selo geral: nota média \`${lead.rating?.toFixed(1) ?? '—'}\` estrelas + total de \`${lead.userRatingCount.toLocaleString('pt-BR')}\` avaliações, com identidade visual do Google (ícone "G" colorido).
+====================================================================
+INTELIGÊNCIA VISUAL BASEADA NA FACHADA
+====================================================================
 
-4. GALERIA DE FOTOS DINÂMICA:
-- Crie uma galeria em grid responsivo que renderize todas as imagens do array \`photos[]\`.
-- Ao clicar em uma foto, abrir Lightbox com navegação prev/next e botão de fechar.
+Utilize automaticamente photos[0] como referência visual principal (fachada).
+Analise visualmente e defina automaticamente:
+- paleta principal do site baseada nas cores da fachada;
+- temperatura visual (quente/fria/neutra);
+- estilo tipográfico compatível com o nível do estabelecimento;
+- intensidade do overlay da Hero Section.
 
-5. RODAPÉ & CONTATO DINÂMICO:
-- Renderize o endereço exato: "${lead.address}".
-- Botão de telefone com link \`href="tel:${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : '[TELEFONE]'}"\` exibindo "${lead.phone ?? '(inserir telefone)'}".
-- Link "Como Chegar" apontando para ${lead.googleMapsUri ?? `https://maps.google.com/?q=${encodeURIComponent(lead.address)}`}.
-- Lista completa de horários de funcionamento consumindo \`opening_hours.weekday_text\`.
-- Ícones para redes sociais (Instagram, Facebook, WhatsApp) — deixar links em branco para preencher depois.
+====================================================================
+LOGO E BRANDING DINÂMICO
+====================================================================
 
-REQUISITOS TÉCNICOS:
-- Use React com Tailwind CSS.
-- Adicione skeleton screen elegante enquanto os dados "carregam" (simule um delay de 1.5s no mock para demonstrar o loading).
-- Transições suaves (fade, slide) em todos os componentes interativos.
-- Mobile-First com breakpoints para tablet e desktop.
-- Design estilo: ${designStyle}.
-- Paleta de cores quentes e convidativas para estabelecimento gastronômico.
-- Botão flutuante de WhatsApp fixo no canto inferior direito em todas as telas.
-- SEO: meta tags com nome "${lead.name}", tipo "${typeLabel}" e cidade extraída do endereço.
+NÃO use imagem estática de logo. Crie uma LOGO TIPOGRÁFICA em SVG ou texto estilizado.
+
+Para "${typeLabel}":
+${lead.primaryType === 'restaurant' || lead.primaryType === 'pizza_restaurant' ? '→ Serif elegante, transmitindo tradição e sofisticação' : ''}
+${lead.primaryType === 'hamburger_restaurant' || lead.primaryType === 'fast_food_restaurant' ? '→ Sans-serif forte e impactante, moderna e urbana' : ''}
+${lead.primaryType === 'cafe' || lead.primaryType === 'bakery' || lead.primaryType === 'brunch_restaurant' ? '→ Tipografia orgânica/artesanal, aconchegante' : ''}
+${lead.primaryType === 'bar' || lead.primaryType === 'juice_bar' ? '→ Tipografia cinematográfica, noturna e impactante' : ''}
+${!lead.primaryType ? '→ Serif elegante compatível com gastronomia premium' : ''}
+
+====================================================================
+ESTRUTURA DA PÁGINA
+====================================================================
+
+1. NAVBAR PREMIUM
+   - Logo tipográfica à esquerda
+   - Links: Início | Cardápio | Avaliações | Galeria | Contato
+   - Botão CTA WhatsApp no topo direito
+   - Menu hamburguer mobile
+
+2. HERO SECTION FULL SCREEN CINEMATOGRÁFICA
+   - Background: photos[0] (fachada do estabelecimento)
+   - Overlay escuro elegante
+   - Headline emocional forte (baseada no nome e nicho)
+   - Subheadline sofisticada
+   - Badge dinâmico: opening_hours.open_now → "Aberto Agora" (verde) ou "Fechado" (vermelho)
+   - Nota Google: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ com ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
+   - CTA principal: WhatsApp → ${waUrl}
+   - CTA secundário: "Ver Cardápio" (scroll suave)
+   - Micro animações de entrada (fade + slide up)
+
+3. SOBRE O ESTABELECIMENTO
+   - Texto: restaurantData.description
+   - Atributos de serviço: restaurantData.services
+   - Visual premium com foto lateral
+
+4. DESTAQUE DA EXPERIÊNCIA / AMBIENTE
+   - Grid com photos[1], photos[2], photos[3]
+   - Texto emocional sobre a atmosfera
+   - Efeito parallax ou zoom suave no hover
+
+5. CARDÁPIO DINÂMICO (LÓGICA HÍBRIDA OBRIGATÓRIA)
+   SE menu_items.length > 0:
+     - Renderizar itens reais do cardápio
+     - Mostrar: nome, descrição, preço em R$, imagem, categoria
+   SE menu_items estiver vazio (caso atual):
+     - Gerar automaticamente cardápio fictício premium para "${typeLabel}"
+     - Criar categorias, nomes, descrições e preços compatíveis
+     - Usar imagens do Unsplash relacionadas ao nicho
+   - Tabs interativas por categoria
+   - Filtros visuais
+   - Transições suaves
+
+6. PROVA SOCIAL — GOOGLE REVIEWS
+   - Título: "O que nossos clientes dizem no Google"
+   - Selo: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações · ícone G do Google
+   - Carrossel ou grid com reviews do restaurantData.reviews[]
+   - Cada card: avatar (profile_photo_url), nome, estrelas douradas, texto
+
+7. GALERIA DE FOTOS
+   - Grid masonry responsivo com todas as fotos de restaurantData.photos[]
+   - Hover com zoom suave e overlay elegante
+   - Lightbox ao clicar (navegação prev/next, botão fechar)
+
+8. HORÁRIOS DE FUNCIONAMENTO
+   - Lista de opening_hours.weekday_text[]
+   - Badge dinâmico open_now
+   - Design clean e legível
+
+9. LOCALIZAÇÃO & CONTATO
+   - Endereço: "${lead.address}"
+   - Botão telefone: tel:${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : '[TELEFONE]'}
+   - Botão "Como Chegar": ${mapsUrl}
+   - Ícones redes sociais (Instagram, Facebook, TikTok) — links em branco
+   - Mapa embed (iframe Google Maps ou link visual)
+
+10. CTA FINAL
+    - Seção dark cinematográfica
+    - Headline de conversão
+    - Botão WhatsApp grande: ${waUrl}
+
+11. FOOTER PREMIUM
+    - Logo, endereço, horários resumidos
+    - Links legais
+    - Redes sociais
+
+====================================================================
+BOTÃO WHATSAPP FLUTUANTE
+====================================================================
+
+Fixo no canto inferior direito em TODAS as telas.
+Link: ${waUrl}
+Pulse animation suave para chamar atenção.
+
+====================================================================
+COPYWRITING (OBRIGATÓRIO)
+====================================================================
+
+NUNCA use textos genéricos.
+Use linguagem sensorial e gastronômica premium.
+Headlines devem despertar desejo e emoção.
+Tom: sofisticado, humano, convidativo.
+
+Exemplos de headlines para "${lead.name}":
+- "Uma experiência que vai além do sabor"
+- "Onde cada prato conta uma história"
+- "O melhor da gastronomia, a dois passos de você"
+
+====================================================================
+SKELETON SCREEN
+====================================================================
+
+Simule 1.5s de loading com skeleton animado (shimmer effect) antes de renderizar os dados.
+
+====================================================================
+SEO LOCAL AUTOMÁTICO
+====================================================================
+
+Gerar meta tags:
+- title: "${lead.name} — ${typeLabel}${neighborhood ? ` em ${neighborhood}` : ''}${city ? `, ${city}` : ''}"
+- description: "${lead.editorialSummary ?? `${typeLabel} com ${lead.rating?.toFixed(1) ?? ''}⭐ e ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações no Google. ${neighborhood ? `Localizado em ${neighborhood}` : ''}.`}"
+- keywords: "${typeLabel.toLowerCase()}, ${neighborhood}, ${city}, gastronomia, restaurante"
+
+====================================================================
+REQUISITOS TÉCNICOS FINAIS
+====================================================================
+
+- React + Tailwind CSS + Lucide Icons
+- Componentização limpa e reutilizável
+- Mobile-First absoluto
+- Transições suaves em todos os elementos interativos
+- Código organizado, moderno e pronto para produção
+- Performance otimizada
 `;
 }
 
