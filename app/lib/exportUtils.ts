@@ -1,6 +1,17 @@
 import type { Lead } from '../types';
 import { PROFILE_MAP } from '../types';
 
+// ─── Classified Photos (shared type) ─────────────────────────────────────────
+
+export interface ClassifiedPhotos {
+  facade:   string | null;   // URL da fachada
+  interior: string[];        // URLs do ambiente/interior
+  food:     string[];        // URLs de pratos/produtos
+  other:    string[];        // Demais fotos
+  all:      string[];        // Todas as URLs em ordem
+  source:   'vision' | 'positional'; // como foram classificadas
+}
+
 // ─── Type label map (duplicated here to keep utils self-contained) ─────────────
 
 const TYPE_LABELS: Record<string, string> = {
@@ -102,31 +113,11 @@ function parseAddress(address: string): { neighborhood: string; city: string } {
 }
 
 /**
- * Classifica as fotos por tipo com base na posição.
- * No Google Places, photos[0] é a foto de capa (geralmente fachada).
- * As seguintes tendem a ser ambiente e pratos.
- */
-function classifyPhotos(urls: string[]): {
-  facade:   { url: string; index: number } | null;
-  interior: { url: string; index: number }[];
-  food:     { url: string; index: number }[];
-  others:   { url: string; index: number }[];
-} {
-  if (urls.length === 0) return { facade: null, interior: [], food: [], others: [] };
-
-  const facade   = { url: urls[0], index: 0 };
-  const interior = urls.slice(1, 3).map((url, i) => ({ url, index: i + 1 }));
-  const food     = urls.slice(3, 6).map((url, i) => ({ url, index: i + 3 }));
-  const others   = urls.slice(6).map((url, i) => ({ url, index: i + 6 }));
-
-  return { facade, interior, food, others };
-}
-
-/**
  * Generates a V3 premium prompt for Lovable AI website builder.
  * Full creative direction + mock data pre-filled with real Google Places data.
+ * Accepts classified photos from Google Vision API (or positional fallback).
  */
-export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]): string {
+export function generateLovablePrompt(lead: Lead, classified?: ClassifiedPhotos): string {
   const typeLabel  = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? 'Estabelecimento') : 'Estabelecimento';
   const whatsapp   = lead.phone?.replace(/\D/g, '');
   const { neighborhood, city } = parseAddress(lead.address);
@@ -152,12 +143,11 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
   const priceLevel = lead.priceLevel ? (priceMap[lead.priceLevel] ?? '') : '';
 
   // ── Fotos classificadas ────────────────────────────────────────────────────
-  const hasRealPhotos = resolvedPhotoUrls && resolvedPhotoUrls.length > 0;
-  const classified    = hasRealPhotos ? classifyPhotos(resolvedPhotoUrls!) : null;
+  const hasRealPhotos = classified && classified.all.length > 0;
 
   // Bloco de fotos tipadas para o mock
   const buildPhotoBlock = () => {
-    if (!classified) {
+    if (!classified || !hasRealPhotos) {
       return `// ⚠️ FOTOS NÃO DISPONÍVEIS — solicite as fotos reais ao cliente antes de prosseguir.
   // NÃO gere imagens por IA. NÃO use Unsplash. Aguarde as fotos reais.
   photos: {
@@ -168,36 +158,39 @@ export function generateLovablePrompt(lead: Lead, resolvedPhotoUrls?: string[]):
   }`;
     }
 
-    const facadeStr   = classified.facade
-      ? `"${classified.facade.url}"`
-      : 'null';
-    const interiorStr = classified.interior.map(p => `    "${p.url}"`).join(',\n');
-    const foodStr     = classified.food.map(p => `    "${p.url}"`).join(',\n');
-    const othersStr   = classified.others.map(p => `    "${p.url}"`).join(',\n');
-    const allStr      = resolvedPhotoUrls!.map(u => `    "${u}"`).join(',\n');
+    const sourceLabel = classified.source === 'vision'
+      ? '✅ Classificadas por Google Vision AI'
+      : '⚠️ Classificadas por posição (Vision API indisponível)';
 
-    return `// ✅ ${resolvedPhotoUrls!.length} FOTOS REAIS do Google Places — USE OBRIGATORIAMENTE estas URLs.
+    const facadeStr   = classified.facade ? `"${classified.facade}"` : 'null';
+    const interiorStr = classified.interior.map(u => `    "${u}"`).join(',\n');
+    const foodStr     = classified.food.map(u => `    "${u}"`).join(',\n');
+    const othersStr   = classified.other.map(u => `    "${u}"`).join(',\n');
+    const allStr      = classified.all.map(u => `    "${u}"`).join(',\n');
+
+    return `// ${sourceLabel}
+  // ${classified.all.length} FOTOS REAIS do Google Places — USE OBRIGATORIAMENTE estas URLs.
   // PROIBIDO substituir por imagens de IA ou Unsplash. Use APENAS as URLs abaixo.
   photos: {
-    // FACHADA — foto de capa do Google Maps (use para Hero Section e extração de logo/paleta)
+    // FACHADA — use para Hero Section, extração de paleta e recriação do logo
     facade: ${facadeStr},
 
-    // AMBIENTE / INTERIOR
+    // AMBIENTE / INTERIOR (${classified.interior.length} foto${classified.interior.length !== 1 ? 's' : ''})
     interior: [
-${interiorStr || '      // (sem fotos de interior disponíveis)'}
+${interiorStr || '      // (sem fotos de interior identificadas)'}
     ],
 
-    // PRATOS / PRODUTOS
+    // PRATOS / PRODUTOS (${classified.food.length} foto${classified.food.length !== 1 ? 's' : ''})
     food: [
-${foodStr || '      // (sem fotos de pratos disponíveis)'}
+${foodStr || '      // (sem fotos de pratos identificadas)'}
     ],
 
     // DEMAIS FOTOS
-    others: [
+    other: [
 ${othersStr || '      // (sem fotos adicionais)'}
     ],
 
-    // TODAS AS FOTOS (para galeria completa)
+    // TODAS AS FOTOS — para galeria completa
     all: [
 ${allStr}
     ]
@@ -279,7 +272,7 @@ ${allStr}
   menu_items: []
 };`;
 
-  const facadeUrl = classified?.facade?.url ?? null;
+  const facadeUrl = classified?.facade ?? null;
 
   return `Atue como um Desenvolvedor Front-end React Sênior, UI/UX Designer, Diretor Criativo e Especialista em Branding Digital focado no nicho de gastronomia premium.
 
@@ -293,12 +286,13 @@ Nota Google: ${lead.rating?.toFixed(1) ?? '—'} ⭐ (${lead.userRatingCount.toL
 ====================================================================
 
 ${hasRealPhotos ? `ESTAS SÃO AS FOTOS REAIS DO ESTABELECIMENTO extraídas do Google Places API.
+${classified!.source === 'vision' ? '📸 Classificadas por Google Cloud Vision AI (fachada, interior e pratos identificados automaticamente).' : '⚠️ Classificadas por posição (sem Vision AI).'}
 Você DEVE usar EXCLUSIVAMENTE as URLs abaixo. É TERMINANTEMENTE PROIBIDO:
 ❌ Gerar imagens por IA
 ❌ Usar imagens do Unsplash, Pexels ou qualquer banco de imagens
 ❌ Criar imagens placeholder
 
-Todas as ${resolvedPhotoUrls!.length} URLs abaixo são fotos reais e públicas do estabelecimento.
+Todas as ${classified!.all.length} URLs abaixo são fotos reais e públicas do estabelecimento.
 Use-as exatamente como estão, sem modificação.` : `⚠️ FOTOS NÃO DISPONÍVEIS NESTE PROMPT.
 NÃO gere imagens por IA. NÃO use Unsplash.
 Deixe todos os campos de imagem em branco (src="") com comentário "// foto real pendente".
@@ -373,10 +367,10 @@ ESTRUTURA DA PÁGINA
 3. SOBRE O ESTABELECIMENTO
    - Texto: restaurantData.description
    - Serviços: restaurantData.services
-   - Foto de ambiente: restaurantData.photos.interior[0]${classified?.interior[0] ? ` → "${classified.interior[0].url}"` : ''}
+   - Foto de ambiente: restaurantData.photos.interior[0]${classified?.interior[0] ? ` → "${classified.interior[0]}"` : ''}
 
 4. GALERIA DE AMBIENTE
-   - Fotos: restaurantData.photos.interior[]${classified && classified.interior.length > 0 ? `\n   - URLs disponíveis: ${classified.interior.map(p => p.url).join(', ')}` : ''}
+   - Fotos: restaurantData.photos.interior[]${classified && classified.interior.length > 0 ? `\n   - URLs disponíveis: ${classified.interior.join(', ')}` : ''}
    - Grid responsivo com hover zoom suave
 
 5. CARDÁPIO (LÓGICA OBRIGATÓRIA)
@@ -396,7 +390,7 @@ ESTRUTURA DA PÁGINA
 
 7. GALERIA DE FOTOS COMPLETA
    - Usar restaurantData.photos.all[] — TODAS as fotos reais
-   ${hasRealPhotos ? `- URLs reais disponíveis: ${resolvedPhotoUrls!.length} fotos` : '- Aguardar fotos reais do cliente'}
+   ${hasRealPhotos ? `- URLs reais disponíveis: ${classified!.all.length} fotos` : '- Aguardar fotos reais do cliente'}
    - Grid masonry responsivo
    - Lightbox com navegação prev/next ao clicar
 
@@ -461,8 +455,8 @@ REQUISITOS TÉCNICOS
 
 // ─── Briefing individual (TXT) ────────────────────────────────────────────────
 
-export function exportLeadBriefing(lead: Lead, resolvedPhotoUrls?: string[]): void {
-  const prompt   = generateLovablePrompt(lead, resolvedPhotoUrls);
+export function exportLeadBriefing(lead: Lead, classified?: ClassifiedPhotos): void {
+  const prompt   = generateLovablePrompt(lead, classified);
   const filename = `briefing-${lead.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}.txt`;
   downloadFile(prompt, filename, 'text/plain;charset=utf-8');
 }

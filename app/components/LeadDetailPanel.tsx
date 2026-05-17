@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PROFILE_MAP } from '../types';
 import type { Lead } from '../types';
 import PhotoGallery from './PhotoGallery';
-import { exportLeadBriefing, generateLovablePrompt } from '../lib/exportUtils';
+import { exportLeadBriefing, generateLovablePrompt, type ClassifiedPhotos } from '../lib/exportUtils';
 
 interface LeadDetailPanelProps {
   lead:        Lead;
@@ -88,33 +88,49 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
   const typeLabel  = lead.primaryType ? (TYPE_LABELS[lead.primaryType] ?? lead.primaryType) : 'Estabelecimento';
   const domain     = suggestDomain(lead.name);
   const whatsapp   = lead.phone?.replace(/\D/g, '');
-  const [copied,          setCopied]          = useState(false);
-  const [fetchingPrompt,  setFetchingPrompt]  = useState(false);
-  const [resolvedPhotos,  setResolvedPhotos]  = useState<string[]>([]);
+  const [copied,           setCopied]           = useState(false);
+  const [fetchingPrompt,   setFetchingPrompt]   = useState(false);
+  const [classified,       setClassified]       = useState<ClassifiedPhotos | null>(null);
 
-  /** Fetches photo URLs once and caches them in state. */
-  async function getPhotoUrls(): Promise<string[]> {
-    if (resolvedPhotos.length > 0) return resolvedPhotos;
-    if (lead.photoRefs.length === 0) return [];
+  /**
+   * 1) Resolve photo refs → URLs  (via /api/photos)
+   * 2) Classify URLs with Vision AI  (via /api/classify-photos)
+   * Result cached in state.
+   */
+  async function getClassified(): Promise<ClassifiedPhotos | null> {
+    if (classified) return classified;
+    if (lead.photoRefs.length === 0) return null;
+
     try {
-      const res  = await fetch('/api/photos', {
+      // Step 1 — resolve refs to public URLs
+      const photosRes  = await fetch('/api/photos', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ refs: lead.photoRefs }),
       });
-      const data = await res.json() as { urls: string[] };
-      const urls = data.urls ?? [];
-      setResolvedPhotos(urls);
-      return urls;
+      const photosData = await photosRes.json() as { photos: { ref: string; url: string }[] };
+      const urls       = (photosData.photos ?? []).map((p) => p.url);
+      if (urls.length === 0) return null;
+
+      // Step 2 — classify with Google Vision AI
+      const classifyRes  = await fetch('/api/classify-photos', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ urls }),
+      });
+      const classifyData = await classifyRes.json() as { classified: ClassifiedPhotos };
+      const result       = classifyData.classified;
+      setClassified(result);
+      return result;
     } catch {
-      return [];
+      return null;
     }
   }
 
   const handleCopyPrompt = async () => {
     setFetchingPrompt(true);
-    const photoUrls = await getPhotoUrls();
-    const prompt = generateLovablePrompt(lead, photoUrls);
+    const result = await getClassified();
+    const prompt = generateLovablePrompt(lead, result ?? undefined);
     navigator.clipboard.writeText(prompt).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -124,8 +140,8 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
 
   const handleDownloadBriefing = async () => {
     setFetchingPrompt(true);
-    const photoUrls = await getPhotoUrls();
-    exportLeadBriefing(lead, photoUrls);
+    const result = await getClassified();
+    exportLeadBriefing(lead, result ?? undefined);
     setFetchingPrompt(false);
   };
 
@@ -326,7 +342,7 @@ export default function LeadDetailPanel({ lead, onClose, isCaptured, onCapture }
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Buscando fotos…
+                  Classificando fotos com IA…
                 </>
               ) : (
                 <>
