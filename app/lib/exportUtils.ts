@@ -272,7 +272,15 @@ ${allStr}
   menu_items: []
 };`;
 
-  const facadeUrl = classified?.facade ?? null;
+  const facadeUrl     = classified?.facade ?? null;
+  const hasFoodPhotos = (classified?.food?.length ?? 0) > 0;
+  const foodPhotoList = classified?.food ?? [];
+  const interiorList  = classified?.interior ?? [];
+
+  // Mapeamento de fotos de pratos para cards do cardápio
+  const foodPhotoMapping = hasFoodPhotos
+    ? foodPhotoList.map((url, i) => `   - item ${i + 1}: "${url}"`).join('\n')
+    : '';
 
   return `Atue como um Desenvolvedor Front-end React Sênior, UI/UX Designer, Diretor Criativo e Especialista em Branding Digital focado no nicho de gastronomia premium.
 
@@ -282,21 +290,36 @@ Crie uma SPA (Single Page Application) sofisticada, responsiva e orientada para 
 Nota Google: ${lead.rating?.toFixed(1) ?? '—'} ⭐ (${lead.userRatingCount.toLocaleString('pt-BR')} avaliações)${lead.editorialSummary ? `\nDescrição: "${lead.editorialSummary}"` : ''}${serviceAttrs ? `\nServiços: ${serviceAttrs}` : ''}
 
 ====================================================================
-⚠️ REGRA ABSOLUTA — FOTOS REAIS OBRIGATÓRIAS
+⚠️ REGRA ABSOLUTA — USO OBRIGATÓRIO DAS FOTOS REAIS
 ====================================================================
 
-${hasRealPhotos ? `ESTAS SÃO AS FOTOS REAIS DO ESTABELECIMENTO extraídas do Google Places API.
-${classified!.source === 'vision' ? '📸 Classificadas por Google Cloud Vision AI (fachada, interior e pratos identificados automaticamente).' : '⚠️ Classificadas por posição (sem Vision AI).'}
-Você DEVE usar EXCLUSIVAMENTE as URLs abaixo. É TERMINANTEMENTE PROIBIDO:
-❌ Gerar imagens por IA
-❌ Usar imagens do Unsplash, Pexels ou qualquer banco de imagens
-❌ Criar imagens placeholder
+${hasRealPhotos
+  ? `FOTOS REAIS DO ESTABELECIMENTO — ${classified!.all.length} imagens extraídas do Google Places API.
+${classified!.source === 'vision'
+  ? '📸 Classificadas por Google Cloud Vision AI: fachada, interior e pratos identificados com precisão.'
+  : '📍 Classificadas por posição (Vision AI indisponível).'}
 
-Todas as ${classified!.all.length} URLs abaixo são fotos reais e públicas do estabelecimento.
-Use-as exatamente como estão, sem modificação.` : `⚠️ FOTOS NÃO DISPONÍVEIS NESTE PROMPT.
+MAPEAMENTO OBRIGATÓRIO — cada foto tem destino fixo no layout:
+┌─────────────┬────────────────────────────────────────────────────────────┐
+│ CATEGORIA   │ ONDE USAR                                                  │
+├─────────────┼────────────────────────────────────────────────────────────┤
+│ facade      │ Hero Section (background) + análise de paleta/logo         │
+│ interior[]  │ Seção "Sobre" + Galeria de Ambiente                        │
+│ food[]      │ Cards do Cardápio (imagem real de cada prato)              │
+│ all[]       │ Galeria Completa (lightbox)                                │
+└─────────────┴────────────────────────────────────────────────────────────┘
+
+É TERMINANTEMENTE PROIBIDO:
+❌ Usar imagens geradas por IA em qualquer parte do site
+❌ Usar imagens do Unsplash, Pexels ou qualquer banco de imagens
+❌ Substituir ou misturar estas URLs por qualquer outra imagem
+❌ Criar placeholders ou "imagens de exemplo"
+
+Use cada URL EXATAMENTE onde indicado, sem modificação.`
+  : `⚠️ FOTOS NÃO DISPONÍVEIS NESTE PROMPT.
 NÃO gere imagens por IA. NÃO use Unsplash.
-Deixe todos os campos de imagem em branco (src="") com comentário "// foto real pendente".
-O cliente irá fornecer as fotos reais posteriormente.`}
+Deixe todos os campos de imagem com src="" e comentário "// foto real pendente".
+O cliente fornecerá as fotos reais após a entrega.`}
 
 ====================================================================
 MOCK DATA — COLE NO TOPO DO ARQUIVO
@@ -307,149 +330,240 @@ ${mockData}
 \`\`\`
 
 ====================================================================
-${hasRealPhotos && facadeUrl ? `ANÁLISE DA FACHADA PARA BRANDING
+${hasRealPhotos && facadeUrl
+  ? `ANÁLISE DA FACHADA — IDENTIDADE VISUAL COMPLETA
 ====================================================================
 
-A foto da fachada do estabelecimento é:
-${facadeUrl}
+URL DA FACHADA (foto classificada pela Vision AI):
+→ ${facadeUrl}
 
-Ao processar o código, analise visualmente esta imagem para extrair:
+Analise esta imagem e execute os 3 passos abaixo ANTES de escrever qualquer linha de CSS:
 
-1. PALETA DE CORES
-   - Cor dominante da fachada → cor primária do site
-   - Cor secundária/contraste → cor dos botões e destaques
-   - Tom geral (quente/frio/neutro) → define o mood visual
+━━━ PASSO 1 — EXTRAÇÃO DA PALETA DE CORES ━━━━━━━━━━━━━━━━━━━━━━━━
 
-2. ESTILO ARQUITETÔNICO
-   - Moderno/industrial → Sans-serif bold, visual urbano
-   - Rústico/artesanal → Serif ou script, visual aconchegante
-   - Sofisticado/clássico → Serif elegante, visual premium
-   - Jovem/casual → Sans-serif moderna, visual descolado
+Identifique na fachada:
+  a) Cor dominante (fundo da fachada, parede, toldo)
+     → usar como --color-primary no CSS
+  b) Cor de destaque (letreiro, detalhe, moldura)
+     → usar como --color-accent (botões, CTAs, hover)
+  c) Tom do texto legível sobre o fundo
+     → usar como --color-text
+  d) Temperatura da luz (quente = amarelado, fria = azulado, neutra)
+     → influencia o mood geral e o overlay do Hero
 
-3. EXTRAÇÃO DO LOGO / LETREIRO
-   - Procure na foto o letreiro, placa ou logomarca visível na fachada
-   - Se identificar o logotipo real, recrie-o como logo tipográfica SVG
-   - Mantenha as cores, fonte e estilo do logo original
-   - Se não identificar logo, crie uma logo tipográfica condizente com o estilo da fachada
+Declare as variáveis no :root antes de qualquer componente:
+  :root {
+    --color-primary:    /* extraído da fachada */;
+    --color-accent:     /* extraído da fachada */;
+    --color-text:       /* extraído da fachada */;
+    --color-bg:         /* variação suave do primary */;
+  }
 
-USE ESTA ANÁLISE para definir automaticamente toda a identidade visual do site.
+━━━ PASSO 2 — LEITURA DO ESTILO ARQUITETÔNICO ━━━━━━━━━━━━━━━━━━━━
 
-====================================================================` : `LOGO E BRANDING
+Identifique o estilo e aplique a tipografia correspondente:
+  • Moderno / industrial / minimalista → fonte Sans-serif bold (ex: Inter, Sora)
+  • Rústico / artesanal / wood sign   → fonte Serif ou Script (ex: Playfair, Lora)
+  • Sofisticado / clássico / mármores → Serif elegante (ex: Cormorant, EB Garamond)
+  • Jovem / colorido / descolado       → Sans-serif arredondada (ex: Nunito, Poppins)
+  • Japonês / étnico / temático       → fonte temática + elementos visuais compatíveis
+
+━━━ PASSO 3 — RECRIAÇÃO DO LOGO / LETREIRO ━━━━━━━━━━━━━━━━━━━━━━━
+
+Procure na fachada o letreiro, placa ou logomarca do estabelecimento.
+
+SE identificar o logo/letreiro na imagem:
+  → Recrie-o como componente SVG inline
+  → Copie EXATAMENTE as cores, o estilo tipográfico e a proporção
+  → Se houver símbolo ou ícone junto ao nome, recrie-o também em SVG
+  → Este SVG é o logo oficial do site — use em Navbar e Footer
+
+SE não identificar logo na imagem:
+  → Crie uma logo tipográfica SVG condizente com o estilo da fachada
+  → Use as cores e a tipografia extraídas nos passos 1 e 2
+  → O nome "${lead.name}" deve ser a âncora visual da logo
+
+RESULTADO: toda a identidade visual do site (cores, tipografia, logo)
+deve ser DERIVADA desta análise da fachada — não inventada.
+
+====================================================================`
+  : `LOGO E BRANDING (sem foto de fachada disponível)
 ====================================================================
 
-Crie uma LOGO TIPOGRÁFICA em SVG baseada no nome "${lead.name}":
-${lead.primaryType === 'restaurant' || lead.primaryType === 'pizza_restaurant' ? '→ Serif elegante (transmite tradição e sofisticação)' :
-  lead.primaryType === 'hamburger_restaurant' || lead.primaryType === 'fast_food_restaurant' ? '→ Sans-serif bold e impactante (moderna e urbana)' :
-  lead.primaryType === 'cafe' || lead.primaryType === 'bakery' || lead.primaryType === 'brunch_restaurant' ? '→ Tipografia orgânica/artesanal (aconchegante)' :
-  lead.primaryType === 'bar' || lead.primaryType === 'juice_bar' ? '→ Tipografia cinematográfica e impactante' :
-  '→ Serif elegante (gastronomia premium)'}
+Crie uma LOGO TIPOGRÁFICA em SVG para "${lead.name}":
+${lead.primaryType === 'restaurant' || lead.primaryType === 'pizza_restaurant'
+  ? '→ Serif elegante (Playfair Display) — transmite tradição e sofisticação'
+  : lead.primaryType === 'hamburger_restaurant' || lead.primaryType === 'fast_food_restaurant'
+  ? '→ Sans-serif bold (Sora ou Barlow Condensed) — moderna e urbana'
+  : lead.primaryType === 'cafe' || lead.primaryType === 'bakery' || lead.primaryType === 'brunch_restaurant'
+  ? '→ Serif ou Script orgânica (Lora) — aconchegante e artesanal'
+  : lead.primaryType === 'bar' || lead.primaryType === 'juice_bar'
+  ? '→ Sans-serif condensada bold — cinematográfica e impactante'
+  : '→ Serif elegante — gastronomia premium'}
 
 ====================================================================`}
+MAPEAMENTO DETALHADO DAS FOTOS NO LAYOUT
+====================================================================
+${hasRealPhotos ? `
+FACHADA (1 foto — Vision AI identificou como exterior do estabelecimento):
+→ "${facadeUrl}"
+   • Hero Section: <img src="{facade}" /> com overlay escuro gradiente
+   • Navbar: usar para extrair paleta (não exibir como img)
+   • NÃO usar em nenhuma outra seção
+
+INTERIOR / AMBIENTE (${interiorList.length} foto${interiorList.length !== 1 ? 's' : ''} — Vision AI identificou como espaço interno):
+${interiorList.length > 0
+  ? interiorList.map((url, i) => `→ interior[${i}]: "${url}"\n   • ${i === 0 ? 'Seção "Sobre" (foto lateral) + Galeria de Ambiente' : `Galeria de Ambiente — posição ${i + 1}`}`).join('\n')
+  : '→ (nenhuma foto de interior identificada — omitir galeria de ambiente)'}
+
+PRATOS / PRODUTOS (${foodPhotoList.length} foto${foodPhotoList.length !== 1 ? 's' : ''} — Vision AI identificou como alimento/prato):
+${hasFoodPhotos
+  ? foodPhotoList.map((url, i) => `→ food[${i}]: "${url}"\n   • Card do cardápio — item ${i + 1} (imagem real do prato)`).join('\n')
+  : '→ (nenhuma foto de prato identificada — usar emojis nos cards do cardápio)'}
+` : '(fotos não disponíveis — campos de imagem em branco)'}
+====================================================================
 ESTRUTURA DA PÁGINA
 ====================================================================
 
 1. NAVBAR PREMIUM
-   - Logo (tipográfica ou extraída da fachada)
+   - Logo SVG (extraída da fachada ou criada conforme branding)
    - Links: Início | Cardápio | Avaliações | Galeria | Contato
-   - Botão WhatsApp no topo direito
-   - Menu hamburguer mobile
+   - Botão WhatsApp fixo no topo direito (verde #25D366)
+   - Menu hamburguer animado no mobile
 
 2. HERO SECTION FULL SCREEN
-   - Background: restaurantData.photos.facade${facadeUrl ? ` → "${facadeUrl}"` : ' (pendente)'}
-   - Overlay escuro elegante para legibilidade
-   - Headline emocional forte
-   - Badge dinâmico: opening_hours.open_now → "Aberto Agora" (verde) ou "Fechado no Momento" (vermelho)
-   - Nota: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
-   - CTA: WhatsApp → ${waUrl}
-   - CTA secundário: "Ver Cardápio" (âncora suave)
-   - Micro animações de entrada (fade + slide up)
+   - Background OBRIGATÓRIO: restaurantData.photos.facade
+     → src="${facadeUrl ?? '(pendente)'}"
+     → object-fit: cover, object-position: center
+     → overlay: gradiente escuro de baixo para cima (rgba 0,0,0, 0.5→0.7)
+   - Headline emocional forte (gerada com base no nome + tipo + bairro)
+   - Badge dinâmico: opening_hours.open_now
+     → true  = "● Aberto Agora" (verde)
+     → false = "● Fechado no Momento" (vermelho)
+   - Nota Google: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
+   - CTA primário: "Falar no WhatsApp" → ${waUrl}
+   - CTA secundário: "Ver Cardápio" (âncora scroll suave até #cardapio)
+   - Animações de entrada: fade-in + slide-up (staggered, 100ms delay)
 
 3. SOBRE O ESTABELECIMENTO
-   - Texto: restaurantData.description
-   - Serviços: restaurantData.services
-   - Foto de ambiente: restaurantData.photos.interior[0]${classified?.interior[0] ? ` → "${classified.interior[0]}"` : ''}
+   - Texto: restaurantData.description + serviços
+   - Foto de ambiente OBRIGATÓRIA: restaurantData.photos.interior[0]
+     → src="${interiorList[0] ?? '(pendente)'}"
+   - Layout: texto à esquerda, foto à direita (mobile: empilhado)
 
 4. GALERIA DE AMBIENTE
-   - Fotos: restaurantData.photos.interior[]${classified && classified.interior.length > 0 ? `\n   - URLs disponíveis: ${classified.interior.join(', ')}` : ''}
-   - Grid responsivo com hover zoom suave
+   - Usar SOMENTE: restaurantData.photos.interior[]
+${interiorList.length > 0
+  ? interiorList.map((u, i) => `   - interior[${i}]: "${u}"`).join('\n')
+  : '   - (sem fotos de interior — omitir esta seção)'}
+   - Grid 2-3 colunas, aspect-ratio: 4/3, hover: brightness(1.1) + scale(1.02)
 
-5. CARDÁPIO (LÓGICA OBRIGATÓRIA)
-   SE menu_items.length > 0 → renderizar dados reais
-   SE vazio (caso atual) → gerar cardápio fictício premium para "${typeLabel}"
-     - NÃO use imagens de IA nem Unsplash para os pratos
-     - Use emojis ou ícones Lucide como visual dos pratos
-     - Nomes, descrições e preços compatíveis com o nicho
-   - Tabs por categoria + filtros visuais + transições suaves
+5. CARDÁPIO
+${hasFoodPhotos
+  ? `   FOTOS REAIS DE PRATOS disponíveis (${foodPhotoList.length} itens classificados pela Vision AI):
+   Use cada URL abaixo como <img> no card do item correspondente do cardápio:
+${foodPhotoMapping}
+
+   REGRA: cada card de prato deve ter:
+     → <img src="{food[i]}" /> como thumbnail (objeto real identificado pela IA)
+     → Nome fictício premium compatível com "${typeLabel}"
+     → Descrição sensorial curta (2 linhas)
+     → Preço compatível com o segmento ${priceLevel || 'moderado'}
+     → NÃO usar ícones Lucide ou emojis como substituto de foto quando food[] disponível`
+  : `   Nenhuma foto de prato identificada pela Vision AI.
+   Gere cardápio fictício premium para "${typeLabel}":
+     → Use emojis ou ícones Lucide como visual dos itens
+     → Nomes, descrições e preços compatíveis com o nicho ${priceLevel || ''}
+     → NÃO use imagens de IA nem Unsplash`}
+   - Tabs por categoria (ex: Entradas | Principais | Bebidas | Sobremesas)
+   - Filtros visuais + transições suaves entre categorias
 
 6. PROVA SOCIAL — GOOGLE REVIEWS
    - Título: "O que nossos clientes dizem no Google"
-   - Selo: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações
-   - Ícone G colorido do Google
+   - Selo oficial: ${lead.rating?.toFixed(1) ?? '4.5'} ⭐ · ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações · ícone G do Google
    - Carrossel/grid com restaurantData.reviews[]
-   - Cada card: avatar, nome, estrelas douradas, texto
+   - Cada card: avatar (profile_photo_url), nome, estrelas douradas, texto
+   - Auto-play suave no desktop
 
-7. GALERIA DE FOTOS COMPLETA
-   - Usar restaurantData.photos.all[] — TODAS as fotos reais
-   ${hasRealPhotos ? `- URLs reais disponíveis: ${classified!.all.length} fotos` : '- Aguardar fotos reais do cliente'}
-   - Grid masonry responsivo
-   - Lightbox com navegação prev/next ao clicar
+7. GALERIA COMPLETA
+   - Usar TODAS: restaurantData.photos.all[] (${classified?.all.length ?? 0} fotos)
+${classified && classified.all.length > 0
+  ? classified.all.map((u, i) => `   - all[${i}]: "${u}"`).join('\n')
+  : '   - (aguardar fotos reais)'}
+   - Grid masonry responsivo (2 col mobile, 3-4 col desktop)
+   - Lightbox com navegação prev/next, download e zoom
 
 8. HORÁRIOS DE FUNCIONAMENTO
-   - Lista de opening_hours.weekday_text[]
-   - Badge dinâmico open_now
+   - Lista com opening_hours.weekday_text[]
+   - Badge dinâmico open_now (recalculado a cada render)
+   - Destaque visual no dia atual da semana
 
 9. LOCALIZAÇÃO & CONTATO
    - Endereço: "${lead.address}"
    - Telefone clicável: tel:${lead.phone ? '+55' + lead.phone.replace(/\D/g, '') : '[INSERIR]'}
-   - Botão "Como Chegar": ${mapsUrl}
-   - Redes sociais (Instagram, Facebook, WhatsApp) — deixar href em branco
+   - Botão "Como Chegar" → ${mapsUrl}
+   - Embed do Google Maps (iframe com as coordinates do mock data)
+   - Ícones de redes sociais (Instagram, Facebook, WhatsApp) — href="#" por enquanto
 
 10. CTA FINAL
-    - Seção dark cinematográfica
-    - Botão WhatsApp grande: ${waUrl}
+    - Seção dark com overlay cinematográfico
+    - Headline: "Venha nos visitar" ou similar
+    - Botão WhatsApp grande e destacado → ${waUrl}
 
 11. FOOTER PREMIUM
-    - Logo, endereço, horários resumidos, redes sociais
+    - Logo, endereço completo, horários resumidos
+    - Links rápidos + redes sociais
+    - "© ${new Date().getFullYear()} ${lead.name}. Todos os direitos reservados."
 
 ====================================================================
 BOTÃO WHATSAPP FLUTUANTE
 ====================================================================
 
-Fixo canto inferior direito em TODAS as telas.
+Fixo canto inferior direito em TODAS as telas (z-index: 9999).
 Link: ${waUrl}
-Pulse animation suave.
+Cor: #25D366 (verde WhatsApp oficial)
+Ícone: SVG do WhatsApp
+Animação: pulse suave a cada 3s (chama atenção sem irritar)
+Tooltip ao hover: "Fale conosco agora"
 
 ====================================================================
 COPYWRITING
 ====================================================================
 
-NUNCA use textos genéricos.
-Linguagem sensorial e gastronômica. Tom sofisticado e humano.
-Headlines devem despertar desejo. Sem menção a "reservas".
+NUNCA use textos genéricos como "Lorem ipsum" ou "Bem-vindo ao nosso site".
+Tom: sofisticado, humano, sensorial e gastronômico.
+Headlines devem despertar desejo e criar antecipação.
+Descrições de pratos: ingredientes + textura + aroma + apresentação.
+Sem menção a "reservas" ou "agendamento".
+Botões de CTA: imperativos diretos ("Pedir agora", "Ver cardápio", "Falar conosco").
 
 ====================================================================
 SKELETON SCREEN
 ====================================================================
 
-1.5s de loading com shimmer effect antes de renderizar.
+Exibir por 1.5s antes de renderizar o conteúdo:
+- Shimmer effect (animação left-to-right) em todos os blocos
+- Manter o layout exato do site (sem salto de conteúdo ao carregar)
 
 ====================================================================
 SEO LOCAL
 ====================================================================
 
-- title: "${lead.name} — ${typeLabel}${neighborhood ? ` em ${neighborhood}` : ''}${city ? `, ${city}` : ''}"
-- description: "${lead.editorialSummary ?? `${typeLabel} com nota ${lead.rating?.toFixed(1) ?? ''} ⭐ e ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações no Google.${neighborhood ? ` Em ${neighborhood}` : ''}.`}"
+<title>${lead.name} — ${typeLabel}${neighborhood ? ` em ${neighborhood}` : ''}${city ? `, ${city}` : ''}</title>
+<meta name="description" content="${lead.editorialSummary ?? `${typeLabel} com nota ${lead.rating?.toFixed(1) ?? ''} ⭐ e ${lead.userRatingCount.toLocaleString('pt-BR')} avaliações no Google.${neighborhood ? ` Em ${neighborhood}` : ''}.`}" />
+<meta property="og:image" content="${facadeUrl ?? ''}" />
 
 ====================================================================
 REQUISITOS TÉCNICOS
 ====================================================================
 
 - React + Tailwind CSS + Lucide Icons
-- Mobile-First absoluto
-- Componentização limpa
-- Código moderno e pronto para produção
-- Performance otimizada
-- ZERO imagens geradas por IA
+- Mobile-First absoluto (breakpoints: sm 640 | md 768 | lg 1024 | xl 1280)
+- Componentização limpa (um arquivo por seção)
+- Smooth scroll nativo (scroll-behavior: smooth)
+- Imagens com loading="lazy" e decoding="async"
+- Código pronto para produção, sem TODOs ou comentários desnecessários
+- ZERO imagens geradas por IA — apenas as URLs reais do mock data
 `;
 }
 
